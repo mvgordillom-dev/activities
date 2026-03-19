@@ -9,7 +9,8 @@ class TaskService {
       description: 'Align product scope, dependencies, and timeline for the next release.',
       date: DateTime.now().add(const Duration(hours: 3)),
       responsible: 'Alicia',
-      completed: false,
+      hours: 2,
+      status: TaskStatus.inProgress,
       projectId: 'proj-product',
     ),
     TaskItem(
@@ -19,7 +20,8 @@ class TaskService {
       description: 'Create a welcome checklist for new team members joining next week.',
       date: DateTime.now().add(const Duration(days: 1, hours: 1)),
       responsible: 'Marcus',
-      completed: false,
+      hours: 1.5,
+      status: TaskStatus.todo,
       projectId: 'proj-operations',
     ),
     TaskItem(
@@ -29,7 +31,8 @@ class TaskService {
       description: 'Clean outdated mockups and move relevant assets to shared storage.',
       date: DateTime.now().add(const Duration(days: 2, hours: 5)),
       responsible: 'Taylor',
-      completed: false,
+      hours: 0.75,
+      status: TaskStatus.todo,
     ),
     TaskItem(
       id: 'task-1004',
@@ -38,7 +41,8 @@ class TaskService {
       description: 'Summarize lessons learned and follow-up actions for the latest sprint.',
       date: DateTime.now().subtract(const Duration(days: 4)),
       responsible: 'Morgan',
-      completed: true,
+      hours: 1.25,
+      status: TaskStatus.done,
       projectId: 'proj-product',
     ),
     TaskItem(
@@ -48,7 +52,8 @@ class TaskService {
       description: 'Consolidate the latest feedback received from the pilot customers.',
       date: DateTime.now().add(const Duration(days: 12, hours: 2)),
       responsible: 'Jordan',
-      completed: false,
+      hours: 3,
+      status: TaskStatus.todo,
       projectId: 'proj-product',
     ),
     TaskItem(
@@ -58,7 +63,8 @@ class TaskService {
       description: 'Validate expense lines and close the operational budget for the month.',
       date: DateTime.now().subtract(const Duration(days: 16)),
       responsible: 'Sam',
-      completed: true,
+      hours: 2.5,
+      status: TaskStatus.done,
       projectId: 'proj-operations',
     ),
   ];
@@ -71,12 +77,12 @@ class TaskService {
     _tasks.add(task);
   }
 
-  void completeTask(String taskId) {
+  void updateTaskStatus(String taskId, TaskStatus status) {
     final index = _tasks.indexWhere((task) => task.id == taskId);
     if (index == -1) {
       return;
     }
 
-    _tasks[index] = _tasks[index].copyWith(completed: true);
+    _tasks[index] = _tasks[index].copyWith(status: status);
   }
 }

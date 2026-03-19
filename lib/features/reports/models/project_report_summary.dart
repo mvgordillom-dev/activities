@@ -1,15 +1,15 @@
 class ProjectReportSummary {
   const ProjectReportSummary({
     required this.projectName,
-    required this.totalTasks,
-    required this.completedTasks,
-    required this.pendingTasks,
-    required this.completionRate,
+    required this.entryCount,
+    required this.doneEntryCount,
+    required this.daysTracked,
+    required this.totalHours,
   });
 
   final String projectName;
-  final int totalTasks;
-  final int completedTasks;
-  final int pendingTasks;
-  final double completionRate;
+  final int entryCount;
+  final int doneEntryCount;
+  final int daysTracked;
+  final double totalHours;
 }

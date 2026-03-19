@@ -13,8 +13,6 @@ class ReportSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage = (report.completionRate * 100).round();
-
     return SectionCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -26,43 +24,39 @@ class ReportSummaryCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          const SizedBox(height: 14),
-          LinearProgressIndicator(
-            value: report.completionRate,
-            minHeight: 10,
-            borderRadius: BorderRadius.circular(999),
-            backgroundColor: const Color(0xFFE5E7EB),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '$percentage% complete',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.grey.shade700,
-                ),
-          ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 12,
             runSpacing: 12,
             children: [
-              _MetricChip(label: 'Total tasks', value: '${report.totalTasks}'),
+              _MetricChip(label: 'Hours logged', value: _formatHours(report.totalHours)),
               _MetricChip(
-                label: 'Completed',
-                value: '${report.completedTasks}',
-                color: const Color(0xFFDCFCE7),
-                foreground: const Color(0xFF166534),
+                label: 'Daily entries',
+                value: '${report.entryCount}',
+                color: const Color(0xFFE0E7FF),
+                foreground: const Color(0xFF3730A3),
               ),
               _MetricChip(
-                label: 'Pending',
-                value: '${report.pendingTasks}',
-                color: const Color(0xFFFEE2E2),
-                foreground: const Color(0xFFB91C1C),
+                label: 'Tracked days',
+                value: '${report.daysTracked}',
+                color: const Color(0xFFFEF3C7),
+                foreground: const Color(0xFFB45309),
+              ),
+              _MetricChip(
+                label: 'Done entries',
+                value: '${report.doneEntryCount}',
+                color: const Color(0xFFDCFCE7),
+                foreground: const Color(0xFF166534),
               ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  String _formatHours(double hours) {
+    return hours.truncateToDouble() == hours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
   }
 }
 
