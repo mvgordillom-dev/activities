@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/widgets/section_card.dart';
 import '../../../projects/providers/project_provider.dart';
 import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
@@ -19,92 +20,84 @@ class TaskCard extends StatelessWidget {
     final typeStyle = _TaskTypePalette.from(task.type);
     final projectName = context.watch<ProjectProvider>().resolveProjectName(task.projectId);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          Chip(
-                            avatar: Icon(Icons.flag_rounded, color: typeStyle.foreground, size: 18),
-                            label: Text(task.type.label),
-                            backgroundColor: typeStyle.background,
-                            labelStyle: TextStyle(
-                              color: typeStyle.foreground,
-                              fontWeight: FontWeight.w700,
-                            ),
+    return SectionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.name,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                          Chip(
-                            avatar: const Icon(Icons.folder_open_rounded, size: 18),
-                            label: Text(projectName),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(
+                          avatar: Icon(Icons.flag_rounded, color: typeStyle.foreground, size: 18),
+                          label: Text(task.type.label),
+                          backgroundColor: typeStyle.background,
+                          labelStyle: TextStyle(
+                            color: typeStyle.foreground,
+                            fontWeight: FontWeight.w700,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        Chip(
+                          avatar: const Icon(Icons.folder_open_rounded, size: 18),
+                          label: Text(projectName),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                Checkbox(
-                  value: task.completed,
-                  onChanged: (_) => context.read<TaskProvider>().completeTask(task),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _TaskMetaRow(
-              icon: Icons.folder_special_rounded,
-              label: 'Project',
-              value: projectName,
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.description_rounded,
-              label: 'Description',
-              value: task.description,
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.event_rounded,
-              label: 'Date',
-              value: DateFormat('MMM d, y • h:mm a').format(task.date),
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.person_rounded,
-              label: 'Responsible',
-              value: task.responsible,
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.done_all_rounded,
-              label: 'Completed',
-              value: task.completed ? 'Yes' : 'No',
-            ),
-          ],
-        ),
+              ),
+              Checkbox(
+                value: task.completed,
+                onChanged: (_) => context.read<TaskProvider>().completeTask(task),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _TaskMetaRow(
+            icon: Icons.tag_rounded,
+            label: 'Task ID',
+            value: task.id,
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.description_rounded,
+            label: 'Description',
+            value: task.description,
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.event_rounded,
+            label: 'Date',
+            value: DateFormat('MMM d, y • h:mm a').format(task.date),
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.person_rounded,
+            label: 'Responsible',
+            value: task.responsible,
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.folder_special_rounded,
+            label: 'Project classification',
+            value: projectName,
+          ),
+        ],
       ),
     );
   }
