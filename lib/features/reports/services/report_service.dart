@@ -5,6 +5,7 @@ class ReportService {
   List<ProjectReportSummary> buildMonthlySummary({
     required List<TaskItem> tasks,
     required String Function(String? projectId) resolveProjectName,
+    String othersProjectName = 'Others',
   }) {
     final grouped = <String, List<TaskItem>>{};
 
@@ -15,15 +16,31 @@ class ReportService {
 
     final summaries = grouped.entries
         .map(
-          (entry) => ProjectReportSummary(
-            projectName: entry.key,
-            totalTasks: entry.value.length,
-            completedTasks: entry.value.where((task) => task.completed).length,
-            pendingTasks: entry.value.where((task) => !task.completed).length,
-          ),
+          (entry) {
+            final completed = entry.value.where((task) => task.completed).length;
+            final total = entry.value.length;
+            final pending = total - completed;
+            final rate = total == 0 ? 0.0 : completed / total;
+
+            return ProjectReportSummary(
+              projectName: entry.key,
+              totalTasks: total,
+              completedTasks: completed,
+              pendingTasks: pending,
+              completionRate: rate,
+            );
+          },
         )
         .toList()
-      ..sort((first, second) => first.projectName.compareTo(second.projectName));
+      ..sort((first, second) {
+        if (first.projectName == othersProjectName) {
+          return 1;
+        }
+        if (second.projectName == othersProjectName) {
+          return -1;
+        }
+        return first.projectName.compareTo(second.projectName);
+      });
 
     return summaries;
   }

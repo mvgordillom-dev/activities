@@ -15,6 +15,7 @@ extension TaskTypeX on TaskType {
 
 class TaskItem {
   const TaskItem({
+    required this.id,
     required this.name,
     required this.type,
     required this.description,
@@ -24,6 +25,7 @@ class TaskItem {
     this.projectId,
   });
 
+  final String id;
   final String name;
   final TaskType type;
   final String description;
@@ -33,6 +35,7 @@ class TaskItem {
   final String? projectId;
 
   TaskItem copyWith({
+    String? id,
     String? name,
     TaskType? type,
     String? description,
@@ -43,6 +46,7 @@ class TaskItem {
     bool clearProjectId = false,
   }) {
     return TaskItem(
+      id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
       description: description ?? this.description,

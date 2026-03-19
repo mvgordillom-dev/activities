@@ -3,6 +3,7 @@ import '../models/task_item.dart';
 class TaskService {
   final List<TaskItem> _tasks = [
     TaskItem(
+      id: 'task-1001',
       name: 'Finalize sprint roadmap',
       type: TaskType.urgent,
       description: 'Align product scope, dependencies, and timeline for the next release.',
@@ -12,6 +13,7 @@ class TaskService {
       projectId: 'proj-product',
     ),
     TaskItem(
+      id: 'task-1002',
       name: 'Prepare onboarding checklist',
       type: TaskType.normal,
       description: 'Create a welcome checklist for new team members joining next week.',
@@ -21,6 +23,7 @@ class TaskService {
       projectId: 'proj-operations',
     ),
     TaskItem(
+      id: 'task-1003',
       name: 'Archive old design files',
       type: TaskType.noPriority,
       description: 'Clean outdated mockups and move relevant assets to shared storage.',
@@ -29,6 +32,7 @@ class TaskService {
       completed: false,
     ),
     TaskItem(
+      id: 'task-1004',
       name: 'Retrospective notes',
       type: TaskType.normal,
       description: 'Summarize lessons learned and follow-up actions for the latest sprint.',
@@ -36,6 +40,26 @@ class TaskService {
       responsible: 'Morgan',
       completed: true,
       projectId: 'proj-product',
+    ),
+    TaskItem(
+      id: 'task-1005',
+      name: 'Review client feedback',
+      type: TaskType.urgent,
+      description: 'Consolidate the latest feedback received from the pilot customers.',
+      date: DateTime.now().add(const Duration(days: 12, hours: 2)),
+      responsible: 'Jordan',
+      completed: false,
+      projectId: 'proj-product',
+    ),
+    TaskItem(
+      id: 'task-1006',
+      name: 'Budget reconciliation',
+      type: TaskType.normal,
+      description: 'Validate expense lines and close the operational budget for the month.',
+      date: DateTime.now().subtract(const Duration(days: 16)),
+      responsible: 'Sam',
+      completed: true,
+      projectId: 'proj-operations',
     ),
   ];
 
@@ -47,8 +71,8 @@ class TaskService {
     _tasks.add(task);
   }
 
-  void completeTask(TaskItem task) {
-    final index = _tasks.indexOf(task);
+  void completeTask(String taskId) {
+    final index = _tasks.indexWhere((task) => task.id == taskId);
     if (index == -1) {
       return;
     }
