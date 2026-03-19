@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../projects/providers/project_provider.dart';
 import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
 
@@ -16,6 +17,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typeStyle = _TaskTypePalette.from(task.type);
+    final projectName = context.watch<ProjectProvider>().resolveProjectName(task.projectId);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -43,14 +45,24 @@ class TaskCard extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 8),
-                      Chip(
-                        avatar: Icon(Icons.flag_rounded, color: typeStyle.foreground, size: 18),
-                        label: Text(task.type.label),
-                        backgroundColor: typeStyle.background,
-                        labelStyle: TextStyle(
-                          color: typeStyle.foreground,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Chip(
+                            avatar: Icon(Icons.flag_rounded, color: typeStyle.foreground, size: 18),
+                            label: Text(task.type.label),
+                            backgroundColor: typeStyle.background,
+                            labelStyle: TextStyle(
+                              color: typeStyle.foreground,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Chip(
+                            avatar: const Icon(Icons.folder_open_rounded, size: 18),
+                            label: Text(projectName),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -62,6 +74,12 @@ class TaskCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+            _TaskMetaRow(
+              icon: Icons.folder_special_rounded,
+              label: 'Project',
+              value: projectName,
+            ),
+            const SizedBox(height: 10),
             _TaskMetaRow(
               icon: Icons.description_rounded,
               label: 'Description',

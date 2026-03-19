@@ -21,6 +21,7 @@ class TaskItem {
     required this.date,
     required this.responsible,
     required this.completed,
+    this.projectId,
   });
 
   final String name;
@@ -29,6 +30,7 @@ class TaskItem {
   final DateTime date;
   final String responsible;
   final bool completed;
+  final String? projectId;
 
   TaskItem copyWith({
     String? name,
@@ -37,6 +39,8 @@ class TaskItem {
     DateTime? date,
     String? responsible,
     bool? completed,
+    String? projectId,
+    bool clearProjectId = false,
   }) {
     return TaskItem(
       name: name ?? this.name,
@@ -45,6 +49,7 @@ class TaskItem {
       date: date ?? this.date,
       responsible: responsible ?? this.responsible,
       completed: completed ?? this.completed,
+      projectId: clearProjectId ? null : (projectId ?? this.projectId),
     );
   }
 }

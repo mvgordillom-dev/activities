@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../projects/providers/project_provider.dart';
 import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
 
@@ -18,6 +19,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   final _responsibleController = TextEditingController();
   TaskType _selectedType = TaskType.normal;
   DateTime _selectedDate = DateTime.now().add(const Duration(hours: 1));
+  String? _selectedProjectId;
 
   @override
   void dispose() {
@@ -30,6 +32,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= 700;
+    final projects = context.watch<ProjectProvider>().projects;
 
     return Dialog(
       insetPadding: const EdgeInsets.all(20),
@@ -51,7 +54,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Add a task with priority, scheduling, and responsibility details.',
+                  'Add a task with priority, scheduling, responsibility, and project classification.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 22),
@@ -101,11 +104,33 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
                       decoration: const InputDecoration(labelText: 'Responsible'),
                       validator: _requiredValidator,
                     ),
-                    _DateSelector(
-                      selectedDate: _selectedDate,
-                      onSelect: _pickDateTime,
+                    DropdownButtonFormField<String?>(
+                      value: _selectedProjectId,
+                      decoration: const InputDecoration(labelText: 'Project'),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Others'),
+                        ),
+                        ...projects.map(
+                          (project) => DropdownMenuItem<String?>(
+                            value: project.id,
+                            child: Text(project.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedProjectId = value;
+                        });
+                      },
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                _DateSelector(
+                  selectedDate: _selectedDate,
+                  onSelect: _pickDateTime,
                 ),
                 const SizedBox(height: 24),
                 Align(
@@ -144,7 +169,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
   Future<void> _pickDateTime() async {
     final selectedDate = await showDatePicker(
       context: context,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       initialDate: _selectedDate,
     );
@@ -186,6 +211,7 @@ class _TaskFormDialogState extends State<TaskFormDialog> {
             date: _selectedDate,
             responsible: _responsibleController.text.trim(),
             completed: false,
+            projectId: _selectedProjectId,
           ),
         );
 

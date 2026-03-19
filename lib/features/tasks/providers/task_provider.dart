@@ -7,17 +7,21 @@ class TaskProvider extends ChangeNotifier {
   TaskProvider(this._taskService);
 
   final TaskService _taskService;
-  List<TaskItem> _tasks = const [];
+  List<TaskItem> _allTasks = const [];
+
+  List<TaskItem> get allTasks {
+    final sorted = [..._allTasks]..sort((first, second) => first.date.compareTo(second.date));
+    return List.unmodifiable(sorted);
+  }
 
   List<TaskItem> get tasks {
-    final sorted = [..._tasks]..sort((first, second) => first.date.compareTo(second.date));
-    return List.unmodifiable(sorted);
+    return List.unmodifiable(allTasks.where((task) => !task.completed));
   }
 
   Map<DateTime, List<TaskItem>> get groupedTasks {
     final groups = <DateTime, List<TaskItem>>{};
 
-    for (final task in tasks.where((task) => !task.completed)) {
+    for (final task in tasks) {
       final key = DateTime(task.date.year, task.date.month, task.date.day);
       groups.putIfAbsent(key, () => []).add(task);
     }
@@ -27,20 +31,35 @@ class TaskProvider extends ChangeNotifier {
     );
   }
 
+  List<DateTime> get availableReportMonths {
+    final uniqueMonths = {
+      for (final task in allTasks) DateTime(task.date.year, task.date.month),
+    }.toList()
+      ..sort((first, second) => second.compareTo(first));
+
+    return uniqueMonths;
+  }
+
+  List<TaskItem> tasksForMonth(DateTime month) {
+    return allTasks
+        .where((task) => task.date.year == month.year && task.date.month == month.month)
+        .toList(growable: false);
+  }
+
   void loadInitialTasks() {
-    _tasks = _taskService.fetchTasks();
+    _allTasks = _taskService.fetchTasks();
     notifyListeners();
   }
 
   void addTask(TaskItem task) {
     _taskService.addTask(task);
-    _tasks = _taskService.fetchTasks();
+    _allTasks = _taskService.fetchTasks();
     notifyListeners();
   }
 
   void completeTask(TaskItem task) {
     _taskService.completeTask(task);
-    _tasks = _taskService.fetchTasks();
+    _allTasks = _taskService.fetchTasks();
     notifyListeners();
   }
 }

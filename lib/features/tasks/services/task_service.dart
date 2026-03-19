@@ -9,6 +9,7 @@ class TaskService {
       date: DateTime.now().add(const Duration(hours: 3)),
       responsible: 'Alicia',
       completed: false,
+      projectId: 'proj-product',
     ),
     TaskItem(
       name: 'Prepare onboarding checklist',
@@ -17,6 +18,7 @@ class TaskService {
       date: DateTime.now().add(const Duration(days: 1, hours: 1)),
       responsible: 'Marcus',
       completed: false,
+      projectId: 'proj-operations',
     ),
     TaskItem(
       name: 'Archive old design files',
@@ -25,6 +27,15 @@ class TaskService {
       date: DateTime.now().add(const Duration(days: 2, hours: 5)),
       responsible: 'Taylor',
       completed: false,
+    ),
+    TaskItem(
+      name: 'Retrospective notes',
+      type: TaskType.normal,
+      description: 'Summarize lessons learned and follow-up actions for the latest sprint.',
+      date: DateTime.now().subtract(const Duration(days: 4)),
+      responsible: 'Morgan',
+      completed: true,
+      projectId: 'proj-product',
     ),
   ];
 
@@ -43,6 +54,5 @@ class TaskService {
     }
 
     _tasks[index] = _tasks[index].copyWith(completed: true);
-    _tasks.removeWhere((taskItem) => taskItem.completed);
   }
 }
