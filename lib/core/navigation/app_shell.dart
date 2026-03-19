@@ -26,7 +26,7 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Management System'),
+        title: const Text('Activities Dashboard'),
       ),
       body: isWide
           ? Row(
@@ -79,7 +79,7 @@ class _AppShellState extends State<AppShell> {
           ? FloatingActionButton.extended(
               onPressed: _openTaskDialog,
               icon: const Icon(Icons.add_task_rounded),
-              label: const Text('New Task'),
+              label: const Text('New Entry'),
             )
           : null,
     );

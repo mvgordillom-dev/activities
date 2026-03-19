@@ -41,6 +41,7 @@ class TaskBoardScreen extends StatelessWidget {
                   activeTasks: taskProvider.pendingCount,
                   completedTasks: taskProvider.completedCount,
                   projectsCount: projectsCount,
+                  totalHours: taskProvider.totalLoggedHours,
                   onCreateTask: onCreateTask,
                 ),
                 const SizedBox(height: 20),
@@ -48,8 +49,8 @@ class TaskBoardScreen extends StatelessWidget {
                   child: groupedTasks.isEmpty
                       ? EmptyStateCard(
                           icon: Icons.task_alt_rounded,
-                          title: 'No active tasks',
-                          message: 'All completed tasks disappear from this board. Create a new task to see it grouped by day here.',
+                          title: 'No active daily entries',
+                          message: 'Entries marked as Done disappear from this board. Create a new daily log to see it grouped by date here.',
                           action: FilledButton.icon(
                             onPressed: onCreateTask ??
                                 () => Navigator.of(context).push(
@@ -58,7 +59,7 @@ class TaskBoardScreen extends StatelessWidget {
                                       ),
                                     ),
                             icon: const Icon(Icons.add_task_rounded),
-                            label: const Text('Create task'),
+                            label: const Text('Create entry'),
                           ),
                         )
                       : ListView.separated(
@@ -89,6 +90,7 @@ class _HeroHeader extends StatelessWidget {
     required this.activeTasks,
     required this.completedTasks,
     required this.projectsCount,
+    required this.totalHours,
     this.onCreateTask,
   });
 
@@ -97,6 +99,7 @@ class _HeroHeader extends StatelessWidget {
   final int activeTasks;
   final int completedTasks;
   final int projectsCount;
+  final double totalHours;
   final VoidCallback? onCreateTask;
 
   @override
@@ -126,8 +129,9 @@ class _HeroHeader extends StatelessWidget {
                     child: _SummaryGrid(
                       items: [
                         _SummaryItem(label: 'Active days', value: '$activeDays'),
-                        _SummaryItem(label: 'Pending tasks', value: '$activeTasks'),
-                        _SummaryItem(label: 'Completed tasks', value: '$completedTasks'),
+                        _SummaryItem(label: 'Open entries', value: '$activeTasks'),
+                        _SummaryItem(label: 'Done entries', value: '$completedTasks'),
+                        _SummaryItem(label: 'Logged hours', value: _formatHours(totalHours)),
                         _SummaryItem(label: 'Projects', value: '$projectsCount'),
                       ],
                     ),
@@ -140,8 +144,9 @@ class _HeroHeader extends StatelessWidget {
               _SummaryGrid(
                 items: [
                   _SummaryItem(label: 'Active days', value: '$activeDays'),
-                  _SummaryItem(label: 'Pending tasks', value: '$activeTasks'),
-                  _SummaryItem(label: 'Completed tasks', value: '$completedTasks'),
+                  _SummaryItem(label: 'Open entries', value: '$activeTasks'),
+                  _SummaryItem(label: 'Done entries', value: '$completedTasks'),
+                  _SummaryItem(label: 'Logged hours', value: _formatHours(totalHours)),
                   _SummaryItem(label: 'Projects', value: '$projectsCount'),
                 ],
               ),
@@ -150,6 +155,10 @@ class _HeroHeader extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatHours(double hours) {
+    return hours.truncateToDouble() == hours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
   }
 }
 
@@ -164,7 +173,7 @@ class _HeaderText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Manage work by day, owner, and project.',
+          'Manage daily work logs by date, owner, and project.',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -172,7 +181,7 @@ class _HeaderText extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'This board keeps active tasks grouped by date, preserves complete task details, and automatically hides finished work from the active queue.',
+          'Each card represents hours logged for a single day. Move cards to Done when the daily entry is complete, while project boards keep the Jira-style workflow visible.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withOpacity(0.92),
                 height: 1.45,
@@ -191,7 +200,7 @@ class _HeaderText extends StatelessWidget {
                     ),
                   ),
           icon: const Icon(Icons.add_task_rounded),
-          label: const Text('Create task'),
+          label: const Text('Create entry'),
         ),
       ],
     );

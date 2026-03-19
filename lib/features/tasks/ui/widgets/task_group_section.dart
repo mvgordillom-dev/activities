@@ -48,7 +48,7 @@ class TaskGroupSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${tasks.length} task${tasks.length == 1 ? '' : 's'}',
+                  '${tasks.length} entr${tasks.length == 1 ? 'y' : 'ies'}',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),

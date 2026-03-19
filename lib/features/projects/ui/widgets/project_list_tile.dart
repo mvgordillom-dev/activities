@@ -9,6 +9,7 @@ class ProjectListTile extends StatelessWidget {
     required this.subtitle,
     required this.totalTasks,
     required this.activeTasks,
+    required this.loggedHours,
     this.isVirtualProject = false,
   });
 
@@ -16,6 +17,7 @@ class ProjectListTile extends StatelessWidget {
   final String subtitle;
   final int totalTasks;
   final int activeTasks;
+  final double loggedHours;
   final bool isVirtualProject;
 
   @override
@@ -52,12 +54,18 @@ class ProjectListTile extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _MetricPill(label: 'Total tasks', value: '$totalTasks'),
+                    _MetricPill(label: 'Entries', value: '$totalTasks'),
                     _MetricPill(
-                      label: 'Active',
+                      label: 'Open',
                       value: '$activeTasks',
                       background: const Color(0xFFDCFCE7),
                       foreground: const Color(0xFF166534),
+                    ),
+                    _MetricPill(
+                      label: 'Hours',
+                      value: _formatHours(loggedHours),
+                      background: const Color(0xFFFEF3C7),
+                      foreground: const Color(0xFFB45309),
                     ),
                   ],
                 ),
@@ -67,6 +75,10 @@ class ProjectListTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatHours(double hours) {
+    return hours.truncateToDouble() == hours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
   }
 }
 

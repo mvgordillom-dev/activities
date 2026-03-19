@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/widgets/empty_state_card.dart';
 import '../../../../core/widgets/section_card.dart';
 import '../../../projects/providers/project_provider.dart';
+import '../../../tasks/models/task_item.dart';
 import '../../../tasks/providers/task_provider.dart';
 import '../../services/report_service.dart';
 import '../widgets/report_summary_card.dart';
@@ -19,6 +20,7 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   final ReportService _reportService = ReportService();
   DateTime? _selectedMonth;
+  bool _isExporting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +35,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       othersProjectName: ProjectProvider.othersProjectName,
     );
     final isWide = MediaQuery.sizeOf(context).width >= 900;
-    final completedCount = monthTasks.where((task) => task.completed).length;
-    final pendingCount = monthTasks.where((task) => !task.completed).length;
+    final totalHours = monthTasks.fold<double>(0.0, (sum, task) => sum + task.hours);
+    final trackedProjects = reportEntries.length;
+    final trackedDays = {
+      for (final task in monthTasks) DateTime(task.date.year, task.date.month, task.date.day),
+    }.length;
 
     return SafeArea(
       child: Center(
@@ -61,7 +66,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Filter by month and review project-level totals, including the automatic Others classification for uncategorized tasks.',
+                        'Review monthly daily-hour entries by project and export the filtered report as an Excel workbook.',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 20),
@@ -91,15 +96,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
+                            FilledButton.icon(
+                              onPressed: monthTasks.isEmpty || _isExporting
+                                  ? null
+                                  : () => _exportReport(monthTasks, selectedMonth),
+                              icon: _isExporting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.download_rounded),
+                              label: Text(_isExporting ? 'Exporting...' : 'Export .xlsx'),
+                            ),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: Wrap(
                                 spacing: 10,
                                 runSpacing: 10,
                                 alignment: WrapAlignment.end,
                                 children: [
-                                  _MonthMetric(label: 'Projects', value: '${reportEntries.length}'),
-                                  _MonthMetric(label: 'Completed', value: '$completedCount'),
-                                  _MonthMetric(label: 'Pending', value: '$pendingCount'),
+                                  _MonthMetric(label: 'Projects', value: '$trackedProjects'),
+                                  _MonthMetric(label: 'Days', value: '$trackedDays'),
+                                  _MonthMetric(label: 'Hours', value: _formatHours(totalHours)),
                                 ],
                               ),
                             ),
@@ -131,10 +150,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           spacing: 10,
                           runSpacing: 10,
                           children: [
-                            _MonthMetric(label: 'Projects', value: '${reportEntries.length}'),
-                            _MonthMetric(label: 'Completed', value: '$completedCount'),
-                            _MonthMetric(label: 'Pending', value: '$pendingCount'),
+                            _MonthMetric(label: 'Projects', value: '$trackedProjects'),
+                            _MonthMetric(label: 'Days', value: '$trackedDays'),
+                            _MonthMetric(label: 'Hours', value: _formatHours(totalHours)),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: monthTasks.isEmpty || _isExporting
+                                ? null
+                                : () => _exportReport(monthTasks, selectedMonth),
+                            icon: _isExporting
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.download_rounded),
+                            label: Text(_isExporting ? 'Exporting...' : 'Export .xlsx'),
+                          ),
                         ),
                       ],
                     ],
@@ -146,7 +182,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ? EmptyStateCard(
                           icon: Icons.analytics_rounded,
                           title: 'No report data',
-                          message: 'There are no tasks for ${DateFormat('MMMM y').format(selectedMonth)}. Create or reschedule tasks to populate monthly reporting.',
+                          message: 'There are no daily-hour entries for ${DateFormat('MMMM y').format(selectedMonth)}. Create or reschedule entries to populate monthly reporting.',
                         )
                       : ListView.separated(
                           itemCount: reportEntries.length,
@@ -165,6 +201,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  Future<void> _exportReport(List<TaskItem> monthTasks, DateTime selectedMonth) async {
+    final projectProvider = context.read<ProjectProvider>();
+
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final fileName = await _reportService.exportMonthlyHoursReport(
+        month: selectedMonth,
+        tasks: monthTasks,
+        resolveProjectName: projectProvider.resolveProjectName,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Exported $fileName successfully.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to export Excel report: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
+    }
+  }
+
   DateTime _resolveMonth(List<DateTime> availableMonths) {
     if (availableMonths.isEmpty) {
       final now = DateTime.now();
@@ -176,6 +250,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     return _selectedMonth!;
+  }
+
+  String _formatHours(double hours) {
+    return hours.truncateToDouble() == hours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
   }
 }
 
