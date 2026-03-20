@@ -16,6 +16,10 @@ class ProjectProvider extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
+  List<ProjectItem> projectsForStatus(ProjectStatus status) {
+    return projects.where((project) => project.status == status).toList(growable: false);
+  }
+
   void loadInitialProjects() {
     _projects = _projectService.fetchProjects();
     notifyListeners();
@@ -37,7 +41,19 @@ class ProjectProvider extends ChangeNotifier {
         ? '$normalizedId-${projects.length + 1}'
         : normalizedId;
 
-    _projectService.addProject(ProjectItem(id: uniqueId, name: trimmed));
+    _projectService.addProject(
+      ProjectItem(
+        id: uniqueId,
+        name: trimmed,
+        status: ProjectStatus.backlog,
+      ),
+    );
+    _projects = _projectService.fetchProjects();
+    notifyListeners();
+  }
+
+  void updateProjectStatus(ProjectItem project, ProjectStatus status) {
+    _projectService.updateProject(project.copyWith(status: status));
     _projects = _projectService.fetchProjects();
     notifyListeners();
   }
@@ -54,5 +70,19 @@ class ProjectProvider extends ChangeNotifier {
     }
 
     return othersProjectName;
+  }
+
+  String resolveProjectStatusLabel(String? projectId) {
+    if (projectId == null || projectId.isEmpty) {
+      return ProjectStatus.backlog.label;
+    }
+
+    for (final project in projects) {
+      if (project.id == projectId) {
+        return project.status.label;
+      }
+    }
+
+    return ProjectStatus.backlog.label;
   }
 }

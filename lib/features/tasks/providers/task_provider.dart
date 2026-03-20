@@ -14,18 +14,20 @@ class TaskProvider extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
-  List<TaskItem> get tasks => activeTasks;
+  List<TaskItem> get tasks => dailyBoardTasks;
+
+  List<TaskItem> get dailyBoardTasks {
+    return List.unmodifiable(allTasks.where((task) => task.status == TaskStatus.todo));
+  }
 
   List<TaskItem> get activeTasks {
     return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
   }
 
-  List<TaskItem> get tasks => activeTasks;
-
   Map<DateTime, List<TaskItem>> get groupedTasks {
     final groups = <DateTime, List<TaskItem>>{};
 
-    for (final task in activeTasks) {
+    for (final task in dailyBoardTasks) {
       final key = DateTime(task.date.year, task.date.month, task.date.day);
       groups.putIfAbsent(key, () => []).add(task);
     }
@@ -47,7 +49,7 @@ class TaskProvider extends ChangeNotifier {
 
   int get completedCount => allTasks.where((task) => task.status.isDone).length;
 
-  int get pendingCount => allTasks.where((task) => !task.status.isDone).length;
+  int get pendingCount => dailyBoardTasks.length;
 
   double get totalLoggedHours =>
       allTasks.fold<double>(0.0, (total, task) => total + task.hours);
@@ -104,23 +106,60 @@ class TaskProvider extends ChangeNotifier {
         name: name,
         type: type,
         description: description,
-        date: date,
+        date: DateTime(date.year, date.month, date.day),
         responsible: responsible,
         hours: hours,
         status: TaskStatus.todo,
         projectId: projectId,
       ),
     );
-    _allTasks = _taskService.fetchTasks();
-    notifyListeners();
+    _refreshTasks();
   }
 
-  void completeTask(TaskItem task) {
-    updateTaskStatus(task, TaskStatus.done);
+  void completeTask(
+    TaskItem task, {
+    required double hours,
+    required DateTime startedOn,
+    DateTime? completedOn,
+  }) {
+    updateTaskStatus(
+      task,
+      TaskStatus.done,
+      hours: hours,
+      startedOn: startedOn,
+      completedOn: completedOn ?? DateTime.now(),
+    );
   }
 
-  void updateTaskStatus(TaskItem task, TaskStatus status) {
-    _taskService.updateTaskStatus(task.id, status);
+  void updateTaskStatus(
+    TaskItem task,
+    TaskStatus status, {
+    double? hours,
+    DateTime? startedOn,
+    DateTime? completedOn,
+  }) {
+    final normalizedStartedOn = startedOn == null
+        ? null
+        : DateTime(startedOn.year, startedOn.month, startedOn.day);
+    final normalizedCompletedOn = completedOn == null
+        ? null
+        : DateTime(completedOn.year, completedOn.month, completedOn.day);
+
+    _taskService.updateTask(
+      task.copyWith(
+        status: status,
+        hours: hours,
+        startedOn: status == TaskStatus.todo
+            ? normalizedStartedOn
+            : normalizedStartedOn ?? task.startedOn,
+        completedOn: status == TaskStatus.done ? normalizedCompletedOn : null,
+        clearCompletedOn: status != TaskStatus.done,
+      ),
+    );
+    _refreshTasks();
+  }
+
+  void _refreshTasks() {
     _allTasks = _taskService.fetchTasks();
     notifyListeners();
   }

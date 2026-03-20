@@ -66,7 +66,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Review monthly daily-hour entries by project and export the filtered report as an Excel workbook.',
+                        'Review monthly daily-hour entries by project and export task-level detail, including completion metadata and project workflow status.',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 20),
@@ -213,6 +213,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         month: selectedMonth,
         tasks: monthTasks,
         resolveProjectName: projectProvider.resolveProjectName,
+        resolveProjectStatusLabel: projectProvider.resolveProjectStatusLabel,
       );
 
       if (!mounted) {
