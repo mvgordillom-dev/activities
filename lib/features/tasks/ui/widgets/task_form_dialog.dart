@@ -22,6 +22,7 @@ class _TaskFormViewState extends State<TaskFormView> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _responsibleController = TextEditingController();
+  final _hoursController = TextEditingController(text: '1');
   TaskType _selectedType = TaskType.normal;
   DateTime _selectedDate = DateTime.now().add(const Duration(hours: 1));
   String? _selectedProjectId;
@@ -31,6 +32,7 @@ class _TaskFormViewState extends State<TaskFormView> {
     _nameController.dispose();
     _descriptionController.dispose();
     _responsibleController.dispose();
+    _hoursController.dispose();
     super.dispose();
   }
 
@@ -46,14 +48,14 @@ class _TaskFormViewState extends State<TaskFormView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Create task',
+            'Create daily work log',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Capture the complete task data model, assign a responsible owner, and optionally classify it into a project.',
+            'Each entry stores hours logged for a single day and project. Logged hours are never cumulative estimates.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 22),
@@ -63,7 +65,7 @@ class _TaskFormViewState extends State<TaskFormView> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Task name'),
+                decoration: const InputDecoration(labelText: 'Work item name'),
                 validator: _requiredValidator,
               ),
               DropdownButtonFormField<TaskType>(
@@ -129,9 +131,24 @@ class _TaskFormViewState extends State<TaskFormView> {
             ],
           ),
           const SizedBox(height: 16),
-          _DateSelector(
-            selectedDate: _selectedDate,
-            onSelect: _pickDateTime,
+          _ResponsiveFields(
+            isWide: isWide,
+            spacing: 16,
+            children: [
+              TextFormField(
+                controller: _hoursController,
+                decoration: const InputDecoration(
+                  labelText: 'Hours logged for this day',
+                  helperText: 'Example: 2 hours for Project A on a specific date.',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: _hoursValidator,
+              ),
+              _DateSelector(
+                selectedDate: _selectedDate,
+                onSelect: _pickDateTime,
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           Align(
@@ -147,7 +164,7 @@ class _TaskFormViewState extends State<TaskFormView> {
                 FilledButton.icon(
                   onPressed: _submit,
                   icon: const Icon(Icons.save_rounded),
-                  label: const Text('Save task'),
+                  label: const Text('Save daily entry'),
                 ),
               ],
             ),
@@ -161,6 +178,19 @@ class _TaskFormViewState extends State<TaskFormView> {
     if (value == null || value.trim().isEmpty) {
       return 'This field is required';
     }
+    return null;
+  }
+
+  String? _hoursValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Hours logged are required';
+    }
+
+    final hours = double.tryParse(value.trim());
+    if (hours == null || hours <= 0) {
+      return 'Enter a valid number greater than 0';
+    }
+
     return null;
   }
 
@@ -207,6 +237,7 @@ class _TaskFormViewState extends State<TaskFormView> {
           description: _descriptionController.text.trim(),
           date: _selectedDate,
           responsible: _responsibleController.text.trim(),
+          hours: double.parse(_hoursController.text.trim()),
           projectId: _selectedProjectId,
         );
 
@@ -270,7 +301,8 @@ class _DateSelector extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InputDecorator(
         decoration: const InputDecoration(
-          labelText: 'Date & time',
+          labelText: 'Entry date',
+          helperText: 'Daily log date for this project entry.',
           suffixIcon: Icon(Icons.calendar_month_rounded),
         ),
         child: Text('$formatted • $time'),

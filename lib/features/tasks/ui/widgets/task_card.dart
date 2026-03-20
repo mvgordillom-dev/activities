@@ -18,6 +18,7 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typeStyle = _TaskTypePalette.from(task.type);
+    final statusStyle = _TaskStatusPalette.from(task.status);
     final projectName = context.watch<ProjectProvider>().resolveProjectName(task.projectId);
 
     return SectionCard(
@@ -53,6 +54,15 @@ class TaskCard extends StatelessWidget {
                           ),
                         ),
                         Chip(
+                          avatar: Icon(Icons.sync_alt_rounded, color: statusStyle.foreground, size: 18),
+                          label: Text(task.status.label),
+                          backgroundColor: statusStyle.background,
+                          labelStyle: TextStyle(
+                            color: statusStyle.foreground,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Chip(
                           avatar: const Icon(Icons.folder_open_rounded, size: 18),
                           label: Text(projectName),
                         ),
@@ -62,16 +72,19 @@ class TaskCard extends StatelessWidget {
                 ),
               ),
               Checkbox(
-                value: task.completed,
-                onChanged: (_) => context.read<TaskProvider>().completeTask(task),
+                value: task.status.isDone,
+                onChanged: (_) => context.read<TaskProvider>().updateTaskStatus(
+                      task,
+                      task.status.isDone ? TaskStatus.todo : TaskStatus.done,
+                    ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           _TaskMetaRow(
-            icon: Icons.tag_rounded,
-            label: 'Task ID',
-            value: task.id,
+            icon: Icons.schedule_rounded,
+            label: 'Daily hours logged',
+            value: _formatHours(task.hours),
           ),
           const SizedBox(height: 10),
           _TaskMetaRow(
@@ -82,7 +95,7 @@ class TaskCard extends StatelessWidget {
           const SizedBox(height: 10),
           _TaskMetaRow(
             icon: Icons.event_rounded,
-            label: 'Date',
+            label: 'Entry date',
             value: DateFormat('MMM d, y • h:mm a').format(task.date),
           ),
           const SizedBox(height: 10),
@@ -100,6 +113,12 @@ class TaskCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatHours(double hours) {
+    final wholeHours = hours.truncateToDouble() == hours;
+    final value = wholeHours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
+    return '$value hour${hours == 1 ? '' : 's'}';
   }
 }
 
@@ -179,6 +198,36 @@ class _TaskTypePalette {
         return const _TaskTypePalette(
           background: Color(0xFFEDE9FE),
           foreground: Color(0xFF6D28D9),
+        );
+    }
+  }
+}
+
+class _TaskStatusPalette {
+  const _TaskStatusPalette({
+    required this.background,
+    required this.foreground,
+  });
+
+  final Color background;
+  final Color foreground;
+
+  factory _TaskStatusPalette.from(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.todo:
+        return const _TaskStatusPalette(
+          background: Color(0xFFF3F4F6),
+          foreground: Color(0xFF374151),
+        );
+      case TaskStatus.inProgress:
+        return const _TaskStatusPalette(
+          background: Color(0xFFFEF3C7),
+          foreground: Color(0xFFB45309),
+        );
+      case TaskStatus.done:
+        return const _TaskStatusPalette(
+          background: Color(0xFFDCFCE7),
+          foreground: Color(0xFF166534),
         );
     }
   }

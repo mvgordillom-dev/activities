@@ -15,7 +15,7 @@ class TaskProvider extends ChangeNotifier {
   }
 
   List<TaskItem> get activeTasks {
-    return List.unmodifiable(allTasks.where((task) => !task.completed));
+    return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
   }
 
   Map<DateTime, List<TaskItem>> get groupedTasks {
@@ -41,9 +41,12 @@ class TaskProvider extends ChangeNotifier {
     return uniqueMonths;
   }
 
-  int get completedCount => allTasks.where((task) => task.completed).length;
+  int get completedCount => allTasks.where((task) => task.status.isDone).length;
 
-  int get pendingCount => allTasks.where((task) => !task.completed).length;
+  int get pendingCount => allTasks.where((task) => !task.status.isDone).length;
+
+  double get totalLoggedHours =>
+      allTasks.fold<double>(0.0, (total, task) => total + task.hours);
 
   void loadInitialTasks() {
     _allTasks = _taskService.fetchTasks();
@@ -56,6 +59,18 @@ class TaskProvider extends ChangeNotifier {
         .toList(growable: false);
   }
 
+  List<TaskItem> tasksForProject(String? projectId) {
+    final filtered = allTasks.where((task) => task.projectId == projectId).toList()
+      ..sort((first, second) => first.date.compareTo(second.date));
+    return List.unmodifiable(filtered);
+  }
+
+  List<TaskItem> tasksForProjectAndStatus(String? projectId, TaskStatus status) {
+    return tasksForProject(projectId)
+        .where((task) => task.status == status)
+        .toList(growable: false);
+  }
+
   int taskCountForProject(String? projectId) {
     return allTasks.where((task) => task.projectId == projectId).length;
   }
@@ -64,12 +79,19 @@ class TaskProvider extends ChangeNotifier {
     return activeTasks.where((task) => task.projectId == projectId).length;
   }
 
+  double loggedHoursForProject(String? projectId) {
+    return allTasks
+        .where((task) => task.projectId == projectId)
+        .fold<double>(0.0, (total, task) => total + task.hours);
+  }
+
   void addTask({
     required String name,
     required TaskType type,
     required String description,
     required DateTime date,
     required String responsible,
+    required double hours,
     String? projectId,
   }) {
     _taskService.addTask(
@@ -80,7 +102,8 @@ class TaskProvider extends ChangeNotifier {
         description: description,
         date: date,
         responsible: responsible,
-        completed: false,
+        hours: hours,
+        status: TaskStatus.todo,
         projectId: projectId,
       ),
     );
@@ -89,7 +112,11 @@ class TaskProvider extends ChangeNotifier {
   }
 
   void completeTask(TaskItem task) {
-    _taskService.completeTask(task.id);
+    updateTaskStatus(task, TaskStatus.done);
+  }
+
+  void updateTaskStatus(TaskItem task, TaskStatus status) {
+    _taskService.updateTaskStatus(task.id, status);
     _allTasks = _taskService.fetchTasks();
     notifyListeners();
   }

@@ -1,5 +1,7 @@
 enum TaskType { urgent, normal, noPriority }
 
+enum TaskStatus { todo, inProgress, done }
+
 extension TaskTypeX on TaskType {
   String get label {
     switch (this) {
@@ -13,6 +15,21 @@ extension TaskTypeX on TaskType {
   }
 }
 
+extension TaskStatusX on TaskStatus {
+  String get label {
+    switch (this) {
+      case TaskStatus.todo:
+        return 'To Do';
+      case TaskStatus.inProgress:
+        return 'In Progress';
+      case TaskStatus.done:
+        return 'Done';
+    }
+  }
+
+  bool get isDone => this == TaskStatus.done;
+}
+
 class TaskItem {
   const TaskItem({
     required this.id,
@@ -21,7 +38,8 @@ class TaskItem {
     required this.description,
     required this.date,
     required this.responsible,
-    required this.completed,
+    required this.hours,
+    required this.status,
     this.projectId,
   });
 
@@ -31,7 +49,8 @@ class TaskItem {
   final String description;
   final DateTime date;
   final String responsible;
-  final bool completed;
+  final double hours;
+  final TaskStatus status;
   final String? projectId;
 
   TaskItem copyWith({
@@ -41,7 +60,8 @@ class TaskItem {
     String? description,
     DateTime? date,
     String? responsible,
-    bool? completed,
+    double? hours,
+    TaskStatus? status,
     String? projectId,
     bool clearProjectId = false,
   }) {
@@ -52,7 +72,8 @@ class TaskItem {
       description: description ?? this.description,
       date: date ?? this.date,
       responsible: responsible ?? this.responsible,
-      completed: completed ?? this.completed,
+      hours: hours ?? this.hours,
+      status: status ?? this.status,
       projectId: clearProjectId ? null : (projectId ?? this.projectId),
     );
   }
