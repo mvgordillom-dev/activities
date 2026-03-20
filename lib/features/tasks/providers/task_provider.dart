@@ -14,9 +14,13 @@ class TaskProvider extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
+  List<TaskItem> get tasks => activeTasks;
+
   List<TaskItem> get activeTasks {
     return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
   }
+
+  List<TaskItem> get tasks => activeTasks;
 
   Map<DateTime, List<TaskItem>> get groupedTasks {
     final groups = <DateTime, List<TaskItem>>{};
