@@ -6,6 +6,7 @@ import '../../../../core/widgets/section_card.dart';
 import '../../../projects/providers/project_provider.dart';
 import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
+import 'task_completion_dialog.dart';
 
 class TaskCard extends StatelessWidget {
   const TaskCard({
@@ -71,19 +72,27 @@ class TaskCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Checkbox(
-                value: task.status.isDone,
-                onChanged: (_) => context.read<TaskProvider>().updateTaskStatus(
-                      task,
-                      task.status.isDone ? TaskStatus.todo : TaskStatus.done,
-                    ),
+              Tooltip(
+                message: 'Move this daily entry to In Progress',
+                child: Checkbox(
+                  value: task.status == TaskStatus.inProgress,
+                  onChanged: (value) {
+                    if (value ?? false) {
+                      context.read<TaskProvider>().updateTaskStatus(
+                            task,
+                            TaskStatus.inProgress,
+                            startedOn: task.startedOn ?? DateTime.now(),
+                          );
+                    }
+                  },
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           _TaskMetaRow(
             icon: Icons.schedule_rounded,
-            label: 'Daily hours logged',
+            label: 'Hours logged',
             value: _formatHours(task.hours),
           ),
           const SizedBox(height: 10),
@@ -95,23 +104,69 @@ class TaskCard extends StatelessWidget {
           const SizedBox(height: 10),
           _TaskMetaRow(
             icon: Icons.event_rounded,
-            label: 'Entry date',
-            value: DateFormat('MMM d, y • h:mm a').format(task.date),
+            label: 'Creation date',
+            value: DateFormat('MMM d, y').format(task.date),
           ),
           const SizedBox(height: 10),
           _TaskMetaRow(
             icon: Icons.person_rounded,
-            label: 'Responsible',
+            label: 'Assigned to',
             value: task.responsible,
           ),
           const SizedBox(height: 10),
           _TaskMetaRow(
             icon: Icons.folder_special_rounded,
-            label: 'Project classification',
+            label: 'Project',
             value: projectName,
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _changeStatus(context, TaskStatus.inProgress),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('In Progress'),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _changeStatus(context, TaskStatus.done),
+                  icon: const Icon(Icons.done_rounded),
+                  label: const Text('Complete'),
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _changeStatus(BuildContext context, TaskStatus nextStatus) async {
+    final taskProvider = context.read<TaskProvider>();
+
+    if (nextStatus == TaskStatus.done) {
+      final details = await showTaskCompletionDialog(context, task: task);
+      if (details == null || !context.mounted) {
+        return;
+      }
+
+      taskProvider.completeTask(
+        task,
+        hours: details.hours,
+        startedOn: details.startedOn,
+        completedOn: details.completedOn,
+      );
+      return;
+    }
+
+    taskProvider.updateTaskStatus(
+      task,
+      nextStatus,
+      startedOn: nextStatus == TaskStatus.inProgress ? (task.startedOn ?? DateTime.now()) : null,
     );
   }
 

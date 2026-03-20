@@ -19,7 +19,7 @@ extension TaskStatusX on TaskStatus {
   String get label {
     switch (this) {
       case TaskStatus.todo:
-        return 'To Do';
+        return 'All';
       case TaskStatus.inProgress:
         return 'In Progress';
       case TaskStatus.done:
@@ -41,6 +41,8 @@ class TaskItem {
     required this.hours,
     required this.status,
     this.projectId,
+    this.startedOn,
+    this.completedOn,
   });
 
   final String id;
@@ -52,6 +54,8 @@ class TaskItem {
   final double hours;
   final TaskStatus status;
   final String? projectId;
+  final DateTime? startedOn;
+  final DateTime? completedOn;
 
   TaskItem copyWith({
     String? id,
@@ -63,7 +67,11 @@ class TaskItem {
     double? hours,
     TaskStatus? status,
     String? projectId,
+    DateTime? startedOn,
+    DateTime? completedOn,
     bool clearProjectId = false,
+    bool clearStartedOn = false,
+    bool clearCompletedOn = false,
   }) {
     return TaskItem(
       id: id ?? this.id,
@@ -75,6 +83,8 @@ class TaskItem {
       hours: hours ?? this.hours,
       status: status ?? this.status,
       projectId: clearProjectId ? null : (projectId ?? this.projectId),
+      startedOn: clearStartedOn ? null : (startedOn ?? this.startedOn),
+      completedOn: clearCompletedOn ? null : (completedOn ?? this.completedOn),
     );
   }
 }

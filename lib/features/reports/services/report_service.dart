@@ -27,7 +27,8 @@ class ReportService {
             entryCount: entry.value.length,
             doneEntryCount: entry.value.where((task) => task.status.isDone).length,
             daysTracked: {
-              for (final task in entry.value) DateTime(task.date.year, task.date.month, task.date.day),
+              for (final task in entry.value)
+                DateTime(task.date.year, task.date.month, task.date.day),
             }.length,
             totalHours: entry.value.fold<double>(0.0, (total, task) => total + task.hours),
           ),
@@ -50,6 +51,7 @@ class ReportService {
     required DateTime month,
     required List<TaskItem> tasks,
     required String Function(String? projectId) resolveProjectName,
+    required String Function(String? projectId) resolveProjectStatusLabel,
   }) async {
     final excel = Excel.createExcel();
     final defaultSheet = excel.getDefaultSheet();
@@ -59,26 +61,43 @@ class ReportService {
 
     final sheet = excel['Daily Hours'];
     sheet.appendRow([
-      TextCellValue('Project name'),
-      TextCellValue('Date'),
-      TextCellValue('Hours logged'),
+      TextCellValue('Project'),
+      TextCellValue('Task'),
+      TextCellValue('Description'),
+      TextCellValue('Creation date'),
+      TextCellValue('Completion date'),
+      TextCellValue('Hours spent'),
+      TextCellValue('Assigned to'),
+      TextCellValue('Project status'),
     ]);
 
     final sortedTasks = [...tasks]
       ..sort((first, second) {
+        final projectComparison =
+            resolveProjectName(first.projectId).compareTo(resolveProjectName(second.projectId));
+        if (projectComparison != 0) {
+          return projectComparison;
+        }
+
         final dateComparison = first.date.compareTo(second.date);
         if (dateComparison != 0) {
           return dateComparison;
         }
-        return resolveProjectName(first.projectId).compareTo(resolveProjectName(second.projectId));
+
+        return first.name.compareTo(second.name);
       });
 
     final dateFormat = DateFormat('yyyy-MM-dd');
     for (final task in sortedTasks) {
       sheet.appendRow([
         TextCellValue(resolveProjectName(task.projectId)),
+        TextCellValue(task.name),
+        TextCellValue(task.description),
         TextCellValue(dateFormat.format(task.date)),
+        TextCellValue(task.completedOn == null ? '' : dateFormat.format(task.completedOn!)),
         DoubleCellValue(task.hours),
+        TextCellValue(task.responsible),
+        TextCellValue(resolveProjectStatusLabel(task.projectId)),
       ]);
     }
 

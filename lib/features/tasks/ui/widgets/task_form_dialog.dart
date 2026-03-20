@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../projects/providers/project_provider.dart';
@@ -24,7 +25,7 @@ class _TaskFormViewState extends State<TaskFormView> {
   final _responsibleController = TextEditingController();
   final _hoursController = TextEditingController(text: '1');
   TaskType _selectedType = TaskType.normal;
-  DateTime _selectedDate = DateTime.now().add(const Duration(hours: 1));
+  DateTime _selectedDate = DateTime.now();
   String? _selectedProjectId;
 
   @override
@@ -55,7 +56,7 @@ class _TaskFormViewState extends State<TaskFormView> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Each entry stores hours logged for a single day and project. Logged hours are never cumulative estimates.',
+            'Each entry stores hours logged for a single date and project. New entries start in All and move out of this list when you start them.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 22),
@@ -138,7 +139,7 @@ class _TaskFormViewState extends State<TaskFormView> {
               TextFormField(
                 controller: _hoursController,
                 decoration: const InputDecoration(
-                  labelText: 'Hours logged for this day',
+                  labelText: 'Hours logged for this date',
                   helperText: 'Example: 2 hours for Project A on a specific date.',
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -146,7 +147,7 @@ class _TaskFormViewState extends State<TaskFormView> {
               ),
               _DateSelector(
                 selectedDate: _selectedDate,
-                onSelect: _pickDateTime,
+                onSelect: _pickDate,
               ),
             ],
           ),
@@ -194,7 +195,7 @@ class _TaskFormViewState extends State<TaskFormView> {
     return null;
   }
 
-  Future<void> _pickDateTime() async {
+  Future<void> _pickDate() async {
     final selectedDate = await showDatePicker(
       context: context,
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
@@ -206,23 +207,8 @@ class _TaskFormViewState extends State<TaskFormView> {
       return;
     }
 
-    final selectedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedDate),
-    );
-
-    if (!mounted || selectedTime == null) {
-      return;
-    }
-
     setState(() {
-      _selectedDate = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-        selectedTime.hour,
-        selectedTime.minute,
-      );
+      _selectedDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
     });
   }
 
@@ -289,23 +275,34 @@ class _DateSelector extends StatelessWidget {
   });
 
   final DateTime selectedDate;
-  final VoidCallback onSelect;
+  final Future<void> Function() onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final formatted = MaterialLocalizations.of(context).formatFullDate(selectedDate);
-    final time = TimeOfDay.fromDateTime(selectedDate).format(context);
-
-    return InkWell(
-      onTap: onSelect,
-      borderRadius: BorderRadius.circular(16),
-      child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Entry date',
-          helperText: 'Daily log date for this project entry.',
-          suffixIcon: Icon(Icons.calendar_month_rounded),
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Entry date',
+        helperText: 'Dates are stored without a time value.',
+      ),
+      child: InkWell(
+        onTap: onSelect,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  DateFormat('MMMM d, y').format(selectedDate),
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+              const Icon(Icons.expand_more_rounded),
+            ],
+          ),
         ),
-        child: Text('$formatted • $time'),
       ),
     );
   }

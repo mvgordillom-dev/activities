@@ -36,7 +36,8 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
     final taskProvider = context.watch<TaskProvider>();
     final selectedProjectId = _resolveSelectedProjectId(projects);
     final boardTasks = taskProvider.tasksForProject(selectedProjectId);
-    final columns = _buildColumns(selectedProjectId, taskProvider);
+    final projectColumns = _buildProjectColumns(projectProvider);
+    final taskColumns = _buildTaskColumns(selectedProjectId, taskProvider);
 
     return SafeArea(
       child: Center(
@@ -63,7 +64,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Create project categories, review daily hours logged per project, and manage delivery with a Jira-style Kanban board.',
+                        'Create project categories, manage project workflow, and move project tasks across a Jira-style board.',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 20),
@@ -121,32 +122,75 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                         const EmptyStateCard(
                           icon: Icons.folder_copy_rounded,
                           title: 'No projects yet',
-                          message: 'Add your first project to classify daily work logs beyond the automatic Others bucket.',
+                          message:
+                              'Add your first project to classify daily work logs beyond the automatic Others bucket.',
                         )
-                      else
-                        Column(
-                          children: [
-                            ProjectListTile(
-                              name: ProjectProvider.othersProjectName,
-                              subtitle: 'Automatic category for entries without a linked project',
-                              totalTasks: taskProvider.taskCountForProject(null),
-                              activeTasks: taskProvider.activeTaskCountForProject(null),
-                              loggedHours: taskProvider.loggedHoursForProject(null),
-                              isVirtualProject: true,
-                            ),
-                            const SizedBox(height: 12),
-                            for (var index = 0; index < projects.length; index++) ...[
-                              ProjectListTile(
-                                name: projects[index].name,
-                                subtitle: 'ID: ${projects[index].id}',
-                                totalTasks: taskProvider.taskCountForProject(projects[index].id),
-                                activeTasks: taskProvider.activeTaskCountForProject(projects[index].id),
-                                loggedHours: taskProvider.loggedHoursForProject(projects[index].id),
+                      else ...[
+                        SectionCard(
+                          padding: EdgeInsets.all(isWide ? 28 : 22),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Project board',
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                               ),
-                              if (index != projects.length - 1) const SizedBox(height: 12),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Drag projects between All, In Progress, and Done, or use the menu on each card for unrestricted status changes.',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              const SizedBox(height: 18),
+                              if (isWide)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (var index = 0; index < projectColumns.length; index++) ...[
+                                      Expanded(child: projectColumns[index]),
+                                      if (index != projectColumns.length - 1)
+                                        const SizedBox(width: 12),
+                                    ],
+                                  ],
+                                )
+                              else
+                                Column(
+                                  children: [
+                                    for (var index = 0; index < projectColumns.length; index++) ...[
+                                      projectColumns[index],
+                                      if (index != projectColumns.length - 1)
+                                        const SizedBox(height: 16),
+                                    ],
+                                  ],
+                                ),
                             ],
-                          ],
+                          ),
                         ),
+                        const SizedBox(height: 20),
+                        ProjectListTile(
+                          name: ProjectProvider.othersProjectName,
+                          subtitle: 'Automatic category for entries without a linked project',
+                          totalTasks: taskProvider.taskCountForProject(null),
+                          activeTasks: taskProvider.activeTaskCountForProject(null),
+                          loggedHours: taskProvider.loggedHoursForProject(null),
+                          statusLabel: projectProvider.resolveProjectStatusLabel(null),
+                          isVirtualProject: true,
+                        ),
+                        const SizedBox(height: 12),
+                        for (var index = 0; index < projects.length; index++) ...[
+                          ProjectListTile(
+                            name: projects[index].name,
+                            subtitle: 'ID: ${projects[index].id}',
+                            totalTasks: taskProvider.taskCountForProject(projects[index].id),
+                            activeTasks:
+                                taskProvider.activeTaskCountForProject(projects[index].id),
+                            loggedHours: taskProvider.loggedHoursForProject(projects[index].id),
+                            statusLabel: projects[index].status.label,
+                          ),
+                          if (index != projects.length - 1) const SizedBox(height: 12),
+                        ],
+                      ],
                       const SizedBox(height: 20),
                       SectionCard(
                         padding: EdgeInsets.all(isWide ? 28 : 22),
@@ -154,14 +198,14 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Project board',
+                              'Project tasks board',
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Drag cards between To Do, In Progress, and Done. Status updates are persisted immediately for the selected project.',
+                              'Move tasks between All, In Progress, and Done. Completing a task asks for the hours spent and the task start date before saving.',
                               style: Theme.of(context).textTheme.bodyLarge,
                             ),
                             const SizedBox(height: 18),
@@ -193,24 +237,27 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                               EmptyStateCard(
                                 icon: Icons.view_kanban_rounded,
                                 title: 'No cards for this project',
-                                message: 'Create a daily work log for ${projectProvider.resolveProjectName(selectedProjectId)} to populate the board.',
+                                message:
+                                    'Create a daily work log for ${projectProvider.resolveProjectName(selectedProjectId)} to populate the board.',
                               )
                             else if (isWide)
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  for (var index = 0; index < columns.length; index++) ...[
-                                    Expanded(child: columns[index]),
-                                    if (index != columns.length - 1) const SizedBox(width: 12),
+                                  for (var index = 0; index < taskColumns.length; index++) ...[
+                                    Expanded(child: taskColumns[index]),
+                                    if (index != taskColumns.length - 1)
+                                      const SizedBox(width: 12),
                                   ],
                                 ],
                               )
                             else
                               Column(
                                 children: [
-                                  for (var index = 0; index < columns.length; index++) ...[
-                                    columns[index],
-                                    if (index != columns.length - 1) const SizedBox(height: 16),
+                                  for (var index = 0; index < taskColumns.length; index++) ...[
+                                    taskColumns[index],
+                                    if (index != taskColumns.length - 1)
+                                      const SizedBox(height: 16),
                                   ],
                                 ],
                               ),
@@ -228,12 +275,24 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
     );
   }
 
-  List<Widget> _buildColumns(String? projectId, TaskProvider taskProvider) {
+  List<Widget> _buildProjectColumns(ProjectProvider projectProvider) {
+    return ProjectStatus.values
+        .map(
+          (status) => ProjectKanbanColumn(
+            title: status.label,
+            projectStatus: status,
+            projects: projectProvider.projectsForStatus(status),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<Widget> _buildTaskColumns(String? projectId, TaskProvider taskProvider) {
     return TaskStatus.values
         .map(
           (status) => ProjectKanbanColumn(
             title: status.label,
-            status: status,
+            taskStatus: status,
             tasks: taskProvider.tasksForProjectAndStatus(projectId, status),
           ),
         )

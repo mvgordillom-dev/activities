@@ -10,6 +10,7 @@ class ProjectListTile extends StatelessWidget {
     required this.totalTasks,
     required this.activeTasks,
     required this.loggedHours,
+    this.statusLabel,
     this.isVirtualProject = false,
   });
 
@@ -18,6 +19,7 @@ class ProjectListTile extends StatelessWidget {
   final int totalTasks;
   final int activeTasks;
   final double loggedHours;
+  final String? statusLabel;
   final bool isVirtualProject;
 
   @override
@@ -54,6 +56,7 @@ class ProjectListTile extends StatelessWidget {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
+                    if (statusLabel != null) _MetricPill(label: 'Status', value: statusLabel!),
                     _MetricPill(label: 'Entries', value: '$totalTasks'),
                     _MetricPill(
                       label: 'Open',

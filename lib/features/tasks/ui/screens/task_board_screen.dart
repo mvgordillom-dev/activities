@@ -50,7 +50,7 @@ class TaskBoardScreen extends StatelessWidget {
                       ? EmptyStateCard(
                           icon: Icons.task_alt_rounded,
                           title: 'No active daily entries',
-                          message: 'Entries marked as Done disappear from this board. Create a new daily log to see it grouped by date here.',
+                          message: 'Entries move off this board once they are started or completed. Create a new daily log to see it grouped by date here.',
                           action: FilledButton.icon(
                             onPressed: onCreateTask ??
                                 () => Navigator.of(context).push(
@@ -181,7 +181,7 @@ class _HeaderText extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Each card represents hours logged for a single day. Move cards to Done when the daily entry is complete, while project boards keep the Jira-style workflow visible.',
+          'Each card represents hours logged for a single date. Start an entry to move it into In Progress, then finish it from the project board once the work is complete.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withOpacity(0.92),
                 height: 1.45,
