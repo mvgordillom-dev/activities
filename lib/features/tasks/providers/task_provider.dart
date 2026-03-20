@@ -17,7 +17,7 @@ class TaskProvider extends ChangeNotifier {
   List<TaskItem> get tasks => dailyBoardTasks;
 
   List<TaskItem> get dailyBoardTasks {
-    return List.unmodifiable(allTasks.where((task) => task.status == TaskStatus.todo));
+    return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
   }
 
   List<TaskItem> get activeTasks {

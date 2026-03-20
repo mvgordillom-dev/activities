@@ -24,9 +24,12 @@ class ProjectListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
+
     return SectionCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      child: Row(
+      child: Flex(
+        direction: isCompact ? Axis.vertical : Axis.horizontal,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
@@ -38,45 +41,85 @@ class ProjectListTile extends StatelessWidget {
               isVirtualProject ? Icons.auto_awesome_mosaic_rounded : Icons.folder_rounded,
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(subtitle),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    if (statusLabel != null) _MetricPill(label: 'Status', value: statusLabel!),
-                    _MetricPill(label: 'Entries', value: '$totalTasks'),
-                    _MetricPill(
-                      label: 'Open',
-                      value: '$activeTasks',
-                      background: const Color(0xFFDCFCE7),
-                      foreground: const Color(0xFF166534),
-                    ),
-                    _MetricPill(
-                      label: 'Hours',
-                      value: _formatHours(loggedHours),
-                      background: const Color(0xFFFEF3C7),
-                      foreground: const Color(0xFFB45309),
-                    ),
-                  ],
-                ),
-              ],
+          SizedBox(width: isCompact ? 0 : 16, height: isCompact ? 16 : 0),
+          if (isCompact)
+            _ProjectTileContent(
+              name: name,
+              subtitle: subtitle,
+              totalTasks: totalTasks,
+              activeTasks: activeTasks,
+              loggedHours: loggedHours,
+              statusLabel: statusLabel,
+            )
+          else
+            Expanded(
+              child: _ProjectTileContent(
+                name: name,
+                subtitle: subtitle,
+                totalTasks: totalTasks,
+                activeTasks: activeTasks,
+                loggedHours: loggedHours,
+                statusLabel: statusLabel,
+              ),
             ),
-          ),
         ],
       ),
+    );
+  }
+}
+
+class _ProjectTileContent extends StatelessWidget {
+  const _ProjectTileContent({
+    required this.name,
+    required this.subtitle,
+    required this.totalTasks,
+    required this.activeTasks,
+    required this.loggedHours,
+    required this.statusLabel,
+  });
+
+  final String name;
+  final String subtitle;
+  final int totalTasks;
+  final int activeTasks;
+  final double loggedHours;
+  final String? statusLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(subtitle),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            if (statusLabel != null) _MetricPill(label: 'Status', value: statusLabel!),
+            _MetricPill(label: 'Entries', value: '$totalTasks'),
+            _MetricPill(
+              label: 'Open',
+              value: '$activeTasks',
+              background: const Color(0xFFDCFCE7),
+              foreground: const Color(0xFF166534),
+            ),
+            _MetricPill(
+              label: 'Hours',
+              value: _formatHours(loggedHours),
+              background: const Color(0xFFFEF3C7),
+              foreground: const Color(0xFFB45309),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
