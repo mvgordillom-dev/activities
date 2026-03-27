@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/task_item.dart';
@@ -8,24 +11,27 @@ class TaskProvider extends ChangeNotifier {
 
   final TaskService _taskService;
   List<TaskItem> _allTasks = const [];
+  StreamSubscription<TaskItem>? _remoteTaskSubscription;
 
   List<TaskItem> get allTasks {
     final sorted = [..._allTasks]..sort((first, second) => first.date.compareTo(second.date));
     return List.unmodifiable(sorted);
   }
 
-  List<TaskItem> get tasks => activeTasks;
+  List<TaskItem> get tasks => dailyBoardTasks;
+
+  List<TaskItem> get dailyBoardTasks {
+    return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
+  }
 
   List<TaskItem> get activeTasks {
     return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
   }
 
-  List<TaskItem> get tasks => activeTasks;
-
   Map<DateTime, List<TaskItem>> get groupedTasks {
     final groups = <DateTime, List<TaskItem>>{};
 
-    for (final task in activeTasks) {
+    for (final task in dailyBoardTasks) {
       final key = DateTime(task.date.year, task.date.month, task.date.day);
       groups.putIfAbsent(key, () => []).add(task);
     }
@@ -47,13 +53,21 @@ class TaskProvider extends ChangeNotifier {
 
   int get completedCount => allTasks.where((task) => task.status.isDone).length;
 
-  int get pendingCount => allTasks.where((task) => !task.status.isDone).length;
+  int get pendingCount => dailyBoardTasks.length;
 
   double get totalLoggedHours =>
       allTasks.fold<double>(0.0, (total, task) => total + task.hours);
 
   void loadInitialTasks() {
     _allTasks = _taskService.fetchTasks();
+    _remoteTaskSubscription ??= _taskService.remoteTaskAddedStream.listen(
+      (_) => _refreshTasks(),
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Remote task listener error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      },
+    );
+    unawaited(_taskService.initializeRealtime());
     notifyListeners();
   }
 
@@ -98,31 +112,76 @@ class TaskProvider extends ChangeNotifier {
     required double hours,
     String? projectId,
   }) {
-    _taskService.addTask(
-      TaskItem(
-        id: _buildTaskId(),
-        name: name,
-        type: type,
-        description: description,
-        date: date,
-        responsible: responsible,
+    final task = TaskItem(
+      id: _buildTaskId(),
+      name: name,
+      type: type,
+      description: description,
+      date: DateTime(date.year, date.month, date.day),
+      responsible: responsible,
+      hours: hours,
+      status: TaskStatus.todo,
+      projectId: projectId,
+    );
+
+    unawaited(_taskService.addTask(task));
+    _refreshTasks();
+  }
+
+  void completeTask(
+    TaskItem task, {
+    required double hours,
+    required DateTime startedOn,
+    DateTime? completedOn,
+  }) {
+    updateTaskStatus(
+      task,
+      TaskStatus.done,
+      hours: hours,
+      startedOn: startedOn,
+      completedOn: completedOn ?? DateTime.now(),
+    );
+  }
+
+  void updateTaskStatus(
+    TaskItem task,
+    TaskStatus status, {
+    double? hours,
+    DateTime? startedOn,
+    DateTime? completedOn,
+  }) {
+    final normalizedStartedOn = startedOn == null
+        ? null
+        : DateTime(startedOn.year, startedOn.month, startedOn.day);
+    final normalizedCompletedOn = completedOn == null
+        ? null
+        : DateTime(completedOn.year, completedOn.month, completedOn.day);
+
+    _taskService.updateTask(
+      task.copyWith(
+        status: status,
         hours: hours,
-        status: TaskStatus.todo,
-        projectId: projectId,
+        startedOn: status == TaskStatus.todo
+            ? normalizedStartedOn
+            : normalizedStartedOn ?? task.startedOn,
+        completedOn: status == TaskStatus.done ? normalizedCompletedOn : null,
+        clearCompletedOn: status != TaskStatus.done,
       ),
     );
+    _refreshTasks();
+  }
+
+  void _refreshTasks() {
     _allTasks = _taskService.fetchTasks();
     notifyListeners();
   }
 
-  void completeTask(TaskItem task) {
-    updateTaskStatus(task, TaskStatus.done);
-  }
 
-  void updateTaskStatus(TaskItem task, TaskStatus status) {
-    _taskService.updateTaskStatus(task.id, status);
-    _allTasks = _taskService.fetchTasks();
-    notifyListeners();
+  @override
+  void dispose() {
+    unawaited(_remoteTaskSubscription?.cancel());
+    unawaited(_taskService.dispose());
+    super.dispose();
   }
 
   String _buildTaskId() {

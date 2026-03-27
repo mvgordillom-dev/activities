@@ -3,56 +3,30 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/section_card.dart';
-import '../../models/project_item.dart';
-import '../../providers/project_provider.dart';
-import '../../../tasks/models/task_item.dart';
-import '../../../tasks/providers/task_provider.dart';
-import '../../../tasks/ui/widgets/task_completion_dialog.dart';
+import '../../../projects/providers/project_provider.dart';
+import '../../models/task_item.dart';
+import '../../providers/task_provider.dart';
+import 'task_completion_dialog.dart';
 
-class ProjectKanbanColumn extends StatelessWidget {
-  const ProjectKanbanColumn({
+class TaskKanbanColumn extends StatelessWidget {
+  const TaskKanbanColumn({
     super.key,
     required this.title,
-    this.projectStatus,
-    this.taskStatus,
-    this.projects = const [],
-    this.tasks = const [],
-  }) : assert(projectStatus != null || taskStatus != null);
+    required this.status,
+    required this.tasks,
+  });
 
   final String title;
-  final ProjectStatus? projectStatus;
-  final TaskStatus? taskStatus;
-  final List<ProjectItem> projects;
+  final TaskStatus status;
   final List<TaskItem> tasks;
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<Object>(
-      onWillAcceptWithDetails: (details) {
-        final data = details.data;
-        if (data is ProjectItem && projectStatus != null) {
-          return data.status != projectStatus;
-        }
-        if (data is TaskItem && taskStatus != null) {
-          return data.status != taskStatus;
-        }
-        return false;
-      },
-      onAcceptWithDetails: (details) async {
-        final data = details.data;
-
-        if (data is ProjectItem && projectStatus != null) {
-          context.read<ProjectProvider>().updateProjectStatus(data, projectStatus!);
-          return;
-        }
-
-        if (data is TaskItem && taskStatus != null) {
-          await _updateTaskStatus(context, data, taskStatus!);
-        }
-      },
+    return DragTarget<TaskItem>(
+      onWillAcceptWithDetails: (details) => details.data.status != status,
+      onAcceptWithDetails: (details) => _updateTaskStatus(context, details.data, status),
       builder: (context, candidateData, rejectedData) {
         final isHighlighted = candidateData.isNotEmpty;
-        final cardCount = projects.length + tasks.length;
 
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
@@ -85,7 +59,7 @@ class ProjectKanbanColumn extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      '$cardCount',
+                      '${tasks.length}',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -94,16 +68,11 @@ class ProjectKanbanColumn extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              if (cardCount == 0)
+              if (tasks.isEmpty)
                 const _EmptyColumnState()
               else
                 Column(
                   children: [
-                    for (var index = 0; index < projects.length; index++) ...[
-                      _ProjectCard(project: projects[index]),
-                      if (index != projects.length - 1 || tasks.isNotEmpty)
-                        const SizedBox(height: 12),
-                    ],
                     for (var index = 0; index < tasks.length; index++) ...[
                       _TaskBoardCard(task: tasks[index]),
                       if (index != tasks.length - 1) const SizedBox(height: 12),
@@ -147,119 +116,6 @@ class ProjectKanbanColumn extends StatelessWidget {
   }
 }
 
-class _ProjectCard extends StatelessWidget {
-  const _ProjectCard({required this.project});
-
-  final ProjectItem project;
-
-  @override
-  Widget build(BuildContext context) {
-    final taskProvider = context.watch<TaskProvider>();
-    final tasks = taskProvider.tasksForProject(project.id);
-    final openCount = tasks.where((task) => !task.status.isDone).length;
-
-    return LongPressDraggable<Object>(
-      data: project,
-      feedback: Material(
-        color: Colors.transparent,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 300),
-          child: Opacity(
-            opacity: 0.92,
-            child: _ProjectCardBody(
-              project: project,
-              taskCount: tasks.length,
-              openCount: openCount,
-            ),
-          ),
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.35,
-        child: _ProjectCardBody(
-          project: project,
-          taskCount: tasks.length,
-          openCount: openCount,
-        ),
-      ),
-      child: _ProjectCardBody(
-        project: project,
-        taskCount: tasks.length,
-        openCount: openCount,
-      ),
-    );
-  }
-}
-
-class _ProjectCardBody extends StatelessWidget {
-  const _ProjectCardBody({
-    required this.project,
-    required this.taskCount,
-    required this.openCount,
-  });
-
-  final ProjectItem project;
-  final int taskCount;
-  final int openCount;
-
-  @override
-  Widget build(BuildContext context) {
-    return SectionCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  project.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ),
-              PopupMenuButton<ProjectStatus>(
-                tooltip: 'Change project status',
-                onSelected: (status) {
-                  context.read<ProjectProvider>().updateProjectStatus(project, status);
-                },
-                itemBuilder: (context) => ProjectStatus.values
-                    .map(
-                      (status) => PopupMenuItem<ProjectStatus>(
-                        value: status,
-                        child: Text(status.label),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _DetailChip(
-                icon: Icons.layers_rounded,
-                label: '$taskCount tasks',
-              ),
-              _DetailChip(
-                icon: Icons.timelapse_rounded,
-                label: '$openCount active',
-              ),
-              _DetailChip(
-                icon: Icons.flag_rounded,
-                label: project.status.label,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _TaskBoardCard extends StatelessWidget {
   const _TaskBoardCard({required this.task});
 
@@ -267,7 +123,7 @@ class _TaskBoardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LongPressDraggable<Object>(
+    return LongPressDraggable<TaskItem>(
       data: task,
       feedback: Material(
         color: Colors.transparent,
@@ -295,6 +151,8 @@ class _TaskBoardCardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final projectName = context.watch<ProjectProvider>().resolveProjectName(task.projectId);
+
     return SectionCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -362,6 +220,10 @@ class _TaskBoardCardBody extends StatelessWidget {
             runSpacing: 8,
             children: [
               _DetailChip(
+                icon: Icons.folder_open_rounded,
+                label: projectName,
+              ),
+              _DetailChip(
                 icon: Icons.schedule_rounded,
                 label: '${_formatHours(task.hours)}h',
               ),
@@ -411,6 +273,7 @@ class _DetailChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
