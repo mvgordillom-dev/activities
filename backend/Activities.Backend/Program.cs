@@ -35,6 +35,7 @@ builder.Services.AddSignalR()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<ITaskService, InMemoryTaskService>();
+builder.Services.AddSingleton<IProjectService, InMemoryProjectService>();
 
 var app = builder.Build();
 
