@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/task_item.dart';
@@ -8,6 +11,7 @@ class TaskProvider extends ChangeNotifier {
 
   final TaskService _taskService;
   List<TaskItem> _allTasks = const [];
+  StreamSubscription<TaskItem>? _remoteTaskSubscription;
 
   List<TaskItem> get allTasks {
     final sorted = [..._allTasks]..sort((first, second) => first.date.compareTo(second.date));
@@ -17,7 +21,7 @@ class TaskProvider extends ChangeNotifier {
   List<TaskItem> get tasks => dailyBoardTasks;
 
   List<TaskItem> get dailyBoardTasks {
-    return List.unmodifiable(allTasks.where((task) => task.status == TaskStatus.todo));
+    return List.unmodifiable(allTasks.where((task) => !task.status.isDone));
   }
 
   List<TaskItem> get activeTasks {
@@ -56,6 +60,14 @@ class TaskProvider extends ChangeNotifier {
 
   void loadInitialTasks() {
     _allTasks = _taskService.fetchTasks();
+    _remoteTaskSubscription ??= _taskService.remoteTaskAddedStream.listen(
+      (_) => _refreshTasks(),
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Remote task listener error: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      },
+    );
+    unawaited(_taskService.initializeRealtime());
     notifyListeners();
   }
 
@@ -100,19 +112,19 @@ class TaskProvider extends ChangeNotifier {
     required double hours,
     String? projectId,
   }) {
-    _taskService.addTask(
-      TaskItem(
-        id: _buildTaskId(),
-        name: name,
-        type: type,
-        description: description,
-        date: DateTime(date.year, date.month, date.day),
-        responsible: responsible,
-        hours: hours,
-        status: TaskStatus.todo,
-        projectId: projectId,
-      ),
+    final task = TaskItem(
+      id: _buildTaskId(),
+      name: name,
+      type: type,
+      description: description,
+      date: DateTime(date.year, date.month, date.day),
+      responsible: responsible,
+      hours: hours,
+      status: TaskStatus.todo,
+      projectId: projectId,
     );
+
+    unawaited(_taskService.addTask(task));
     _refreshTasks();
   }
 
@@ -162,6 +174,14 @@ class TaskProvider extends ChangeNotifier {
   void _refreshTasks() {
     _allTasks = _taskService.fetchTasks();
     notifyListeners();
+  }
+
+
+  @override
+  void dispose() {
+    unawaited(_remoteTaskSubscription?.cancel());
+    unawaited(_taskService.dispose());
+    super.dispose();
   }
 
   String _buildTaskId() {

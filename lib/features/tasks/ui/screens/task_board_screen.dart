@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/empty_state_card.dart';
 import '../../../../core/widgets/section_card.dart';
+import '../../../projects/models/project_item.dart';
 import '../../../projects/providers/project_provider.dart';
+import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
-import 'add_task_screen.dart';
 import '../widgets/task_group_section.dart';
+import '../widgets/task_kanban_column.dart';
+import 'add_task_screen.dart';
 
-class TaskBoardScreen extends StatelessWidget {
+class TaskBoardScreen extends StatefulWidget {
   const TaskBoardScreen({
     super.key,
     this.onCreateTask,
@@ -17,67 +20,242 @@ class TaskBoardScreen extends StatelessWidget {
   final VoidCallback? onCreateTask;
 
   @override
+  State<TaskBoardScreen> createState() => _TaskBoardScreenState();
+}
+
+class _TaskBoardScreenState extends State<TaskBoardScreen> {
+  static const _allProjectsFilter = '__all_projects__';
+
+  String? _selectedProjectId = _allProjectsFilter;
+
+  @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final isDesktop = size.width >= 1100;
+    final isTablet = size.width >= 700;
     final taskProvider = context.watch<TaskProvider>();
+    final projectProvider = context.watch<ProjectProvider>();
     final groupedTasks = taskProvider.groupedTasks;
-    final isWide = MediaQuery.sizeOf(context).width >= 900;
-    final projectsCount = context.watch<ProjectProvider>().projects.length;
+    final projects = projectProvider.projects;
+    final selectedProjectId = _resolveSelectedProjectId(projects);
+    final boardTasks = _tasksForSelectedProject(taskProvider, selectedProjectId);
+    final taskColumns = TaskStatus.values
+        .map(
+          (status) => TaskKanbanColumn(
+            title: status.label,
+            status: status,
+            tasks: boardTasks.where((task) => task.status == status).toList(growable: false),
+          ),
+        )
+        .toList(growable: false);
 
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isWide ? 1240 : 760),
-          child: Padding(
+          constraints: BoxConstraints(maxWidth: isDesktop ? 1320 : 920),
+          child: ListView(
             padding: EdgeInsets.symmetric(
-              horizontal: isWide ? 32 : 16,
+              horizontal: isDesktop ? 32 : 16,
               vertical: 20,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _HeroHeader(
-                  isWide: isWide,
-                  activeDays: groupedTasks.length,
-                  activeTasks: taskProvider.pendingCount,
-                  completedTasks: taskProvider.completedCount,
-                  projectsCount: projectsCount,
-                  totalHours: taskProvider.totalLoggedHours,
-                  onCreateTask: onCreateTask,
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: groupedTasks.isEmpty
-                      ? EmptyStateCard(
-                          icon: Icons.task_alt_rounded,
-                          title: 'No active daily entries',
-                          message: 'Entries move off this board once they are started or completed. Create a new daily log to see it grouped by date here.',
-                          action: FilledButton.icon(
-                            onPressed: onCreateTask ??
-                                () => Navigator.of(context).push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => const AddTaskScreen(),
-                                      ),
-                                    ),
-                            icon: const Icon(Icons.add_task_rounded),
-                            label: const Text('Create entry'),
+            children: [
+              _HeroHeader(
+                isWide: isTablet,
+                activeDays: groupedTasks.length,
+                activeTasks: taskProvider.pendingCount,
+                completedTasks: taskProvider.completedCount,
+                projectsCount: projectProvider.projects.length,
+                totalHours: taskProvider.totalLoggedHours,
+                onCreateTask: widget.onCreateTask,
+              ),
+              const SizedBox(height: 20),
+              SectionCard(
+                padding: EdgeInsets.all(isDesktop ? 28 : 22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Daily entries board',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        )
-                      : ListView.separated(
-                          itemBuilder: (context, index) {
-                            final group = groupedTasks.entries.elementAt(index);
-                            return TaskGroupSection(
-                              day: group.key,
-                              tasks: group.value,
-                            );
-                          },
-                          separatorBuilder: (_, __) => const SizedBox(height: 18),
-                          itemCount: groupedTasks.length,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Track active daily entries by date. Entries stay visible here while they are open or already in progress, so the board never clears unexpectedly.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 18),
+                    if (groupedTasks.isEmpty)
+                      EmptyStateCard(
+                        icon: Icons.task_alt_rounded,
+                        title: 'No active daily entries',
+                        message:
+                            'All daily entries are completed. Create a new entry to add work back onto the board.',
+                        action: FilledButton.icon(
+                          onPressed: widget.onCreateTask ??
+                              () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => const AddTaskScreen(),
+                                    ),
+                                  ),
+                          icon: const Icon(Icons.add_task_rounded),
+                          label: const Text('Create entry'),
                         ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          for (var index = 0; index < groupedTasks.length; index++) ...[
+                            TaskGroupSection(
+                              day: groupedTasks.entries.elementAt(index).key,
+                              tasks: groupedTasks.entries.elementAt(index).value,
+                            ),
+                            if (index != groupedTasks.length - 1) const SizedBox(height: 18),
+                          ],
+                        ],
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              SectionCard(
+                padding: EdgeInsets.all(isDesktop ? 28 : 22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Task status board',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Manage task workflow independently from Projects. Move cards between All, In Progress, and Done while filtering by project when needed.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 18),
+                    DropdownButtonFormField<String?>(
+                      value: selectedProjectId,
+                      decoration: const InputDecoration(
+                        labelText: 'Board project',
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: _allProjectsFilter,
+                          child: Text('All projects'),
+                        ),
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text(ProjectProvider.othersProjectName),
+                        ),
+                        ...projects.map(
+                          (project) => DropdownMenuItem<String?>(
+                            value: project.id,
+                            child: Text(project.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedProjectId = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    if (boardTasks.isEmpty)
+                      EmptyStateCard(
+                        icon: Icons.view_kanban_rounded,
+                        title: selectedProjectId == _allProjectsFilter
+                            ? 'No task cards yet'
+                            : 'No cards for this project',
+                        message:
+                            'Create a daily work log for ${_boardLabel(projectProvider, selectedProjectId)} to populate the board.',
+                      )
+                    else
+                      _ResponsiveTaskBoard(
+                        isDesktop: isDesktop,
+                        columns: taskColumns,
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  String? _resolveSelectedProjectId(List<ProjectItem> projects) {
+    if (_selectedProjectId == null || _selectedProjectId == _allProjectsFilter) {
+      return _selectedProjectId;
+    }
+
+    final exists = projects.any((project) => project.id == _selectedProjectId);
+    if (!exists) {
+      _selectedProjectId = _allProjectsFilter;
+    }
+
+    return _selectedProjectId;
+  }
+
+  List<TaskItem> _tasksForSelectedProject(
+    TaskProvider taskProvider,
+    String? selectedProjectId,
+  ) {
+    if (selectedProjectId == _allProjectsFilter) {
+      return taskProvider.allTasks;
+    }
+
+    return taskProvider.tasksForProject(selectedProjectId);
+  }
+
+  String _boardLabel(ProjectProvider projectProvider, String? selectedProjectId) {
+    if (selectedProjectId == _allProjectsFilter) {
+      return 'all projects';
+    }
+
+    return projectProvider.resolveProjectName(selectedProjectId);
+  }
+}
+
+class _ResponsiveTaskBoard extends StatelessWidget {
+  const _ResponsiveTaskBoard({
+    required this.isDesktop,
+    required this.columns,
+  });
+
+  final bool isDesktop;
+  final List<Widget> columns;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isDesktop) {
+      return Column(
+        children: [
+          for (var index = 0; index < columns.length; index++) ...[
+            columns[index],
+            if (index != columns.length - 1) const SizedBox(height: 16),
+          ],
+        ],
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var index = 0; index < columns.length; index++) ...[
+            SizedBox(
+              width: 320,
+              child: columns[index],
+            ),
+            if (index != columns.length - 1) const SizedBox(width: 12),
+          ],
+        ],
       ),
     );
   }
@@ -124,8 +302,7 @@ class _HeroHeader extends StatelessWidget {
                 children: [
                   Expanded(child: _HeaderText(onCreateTask: onCreateTask)),
                   const SizedBox(width: 24),
-                  SizedBox(
-                    width: 360,
+                  Flexible(
                     child: _SummaryGrid(
                       items: [
                         _SummaryItem(label: 'Active days', value: '$activeDays'),
@@ -173,7 +350,7 @@ class _HeaderText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Manage daily work logs by date, owner, and project.',
+          'Manage daily work logs by date, owner, project, and status.',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -181,7 +358,7 @@ class _HeaderText extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Each card represents hours logged for a single date. Start an entry to move it into In Progress, then finish it from the project board once the work is complete.',
+          'Daily entries stay visible until they are completed, and the task board below keeps every workflow column available on desktop, tablet, and mobile layouts.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withOpacity(0.92),
                 height: 1.45,
