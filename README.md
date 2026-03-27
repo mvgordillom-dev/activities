@@ -46,3 +46,11 @@ lib/
 2. If platform folders are missing locally, run `flutter create .` once.
 3. Run `flutter pub get`.
 4. Start the app with `flutter run -d chrome` for web or `flutter run` for mobile.
+
+## ASP.NET Core backend (SignalR)
+
+A minimal .NET backend is available in `backend/Activities.Backend` with:
+- `TaskItem` model aligned to the Flutter task fields.
+- In-memory task service.
+- `TasksController` endpoints for listing and creating tasks.
+- `TaskHub` SignalR hub (`/hubs/tasks`) that broadcasts `taskCreated` whenever a task is added.
