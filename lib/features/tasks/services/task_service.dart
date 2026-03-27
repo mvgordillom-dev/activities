@@ -1,6 +1,21 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
 import '../models/task_item.dart';
+import 'task_signalr_service.dart';
 
 class TaskService {
+  TaskService({TaskSignalRService? realtimeService})
+      : _realtimeService = realtimeService;
+
+  final TaskSignalRService? _realtimeService;
+  final StreamController<TaskItem> _remoteTaskAddedController =
+      StreamController<TaskItem>.broadcast();
+
+  StreamSubscription<TaskItem>? _incomingSubscription;
+  bool _isRealtimeInitialized = false;
+
   final List<TaskItem> _tasks = [
     TaskItem(
       id: 'task-1001',
@@ -74,12 +89,47 @@ class TaskService {
     ),
   ];
 
+  Stream<TaskItem> get remoteTaskAddedStream => _remoteTaskAddedController.stream;
+
   List<TaskItem> fetchTasks() {
     return List.unmodifiable(_tasks);
   }
 
-  void addTask(TaskItem task) {
+  Future<void> initializeRealtime() async {
+    if (_isRealtimeInitialized || _realtimeService == null) {
+      return;
+    }
+
+    _isRealtimeInitialized = true;
+    _incomingSubscription = _realtimeService!.incomingTasks.listen(
+      _handleIncomingTask,
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Task stream listener failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      },
+    );
+
+    try {
+      await _realtimeService!.start();
+    } catch (error, stackTrace) {
+      debugPrint('Task realtime initialization failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> addTask(TaskItem task) async {
     _tasks.add(task);
+
+    if (_realtimeService == null) {
+      return;
+    }
+
+    try {
+      await _realtimeService!.sendTask(task);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to sync task to server: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   void updateTask(TaskItem updatedTask) {
@@ -89,5 +139,22 @@ class TaskService {
     }
 
     _tasks[index] = updatedTask;
+  }
+
+  Future<void> dispose() async {
+    await _incomingSubscription?.cancel();
+    await _remoteTaskAddedController.close();
+    await _realtimeService?.dispose();
+  }
+
+  void _handleIncomingTask(TaskItem incomingTask) {
+    final existingIndex = _tasks.indexWhere((task) => task.id == incomingTask.id);
+    if (existingIndex != -1) {
+      _tasks[existingIndex] = incomingTask;
+      return;
+    }
+
+    _tasks.add(incomingTask);
+    _remoteTaskAddedController.add(incomingTask);
   }
 }
