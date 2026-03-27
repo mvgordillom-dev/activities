@@ -8,7 +8,7 @@ import 'package:activities/features/tasks/services/task_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('moving a task to in progress removes it from the daily board only', () {
+  test('moving a task to in progress keeps it on the daily board with updated status', () {
     final provider = TaskProvider(TaskService())..loadInitialTasks();
     final pendingTask = provider.dailyBoardTasks.firstWhere((task) => task.status == TaskStatus.todo);
     final initialDailyBoardCount = provider.dailyBoardTasks.length;
@@ -20,11 +20,11 @@ void main() {
       startedOn: pendingTask.date,
     );
 
-    expect(provider.dailyBoardTasks.any((task) => task.id == pendingTask.id), isFalse);
-    expect(provider.dailyBoardTasks.length, initialDailyBoardCount - 1);
+    expect(provider.dailyBoardTasks.any((task) => task.id == pendingTask.id), isTrue);
+    expect(provider.dailyBoardTasks.length, initialDailyBoardCount);
     expect(provider.allTasks.length, initialTotalCount);
     expect(
-      provider.allTasks.any(
+      provider.dailyBoardTasks.any(
         (task) =>
             task.id == pendingTask.id &&
             task.status == TaskStatus.inProgress &&

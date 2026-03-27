@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/empty_state_card.dart';
 import '../../../../core/widgets/section_card.dart';
-import '../../../tasks/models/task_item.dart';
 import '../../../tasks/providers/task_provider.dart';
 import '../../models/project_item.dart';
 import '../../providers/project_provider.dart';
@@ -20,7 +19,6 @@ class ProjectManagementScreen extends StatefulWidget {
 class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String? _selectedProjectId;
 
   @override
   void dispose() {
@@ -34,10 +32,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
     final projectProvider = context.watch<ProjectProvider>();
     final projects = projectProvider.projects;
     final taskProvider = context.watch<TaskProvider>();
-    final selectedProjectId = _resolveSelectedProjectId(projects);
-    final boardTasks = taskProvider.tasksForProject(selectedProjectId);
     final projectColumns = _buildProjectColumns(projectProvider);
-    final taskColumns = _buildTaskColumns(selectedProjectId, taskProvider);
 
     return SafeArea(
       child: Center(
@@ -64,7 +59,7 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Create project categories, manage project workflow, and move project tasks across a Jira-style board.',
+                        'Create project categories, manage project workflow, and review project workload summaries.',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 20),
@@ -191,79 +186,6 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
                           if (index != projects.length - 1) const SizedBox(height: 12),
                         ],
                       ],
-                      const SizedBox(height: 20),
-                      SectionCard(
-                        padding: EdgeInsets.all(isWide ? 28 : 22),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Project tasks board',
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Move tasks between All, In Progress, and Done. Completing a task asks for the hours spent and the task start date before saving.',
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                            const SizedBox(height: 18),
-                            DropdownButtonFormField<String?>(
-                              value: selectedProjectId,
-                              decoration: const InputDecoration(
-                                labelText: 'Board project',
-                              ),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text(ProjectProvider.othersProjectName),
-                                ),
-                                ...projects.map(
-                                  (project) => DropdownMenuItem<String?>(
-                                    value: project.id,
-                                    child: Text(project.name),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedProjectId = value;
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 18),
-                            if (boardTasks.isEmpty)
-                              EmptyStateCard(
-                                icon: Icons.view_kanban_rounded,
-                                title: 'No cards for this project',
-                                message:
-                                    'Create a daily work log for ${projectProvider.resolveProjectName(selectedProjectId)} to populate the board.',
-                              )
-                            else if (isWide)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  for (var index = 0; index < taskColumns.length; index++) ...[
-                                    Expanded(child: taskColumns[index]),
-                                    if (index != taskColumns.length - 1)
-                                      const SizedBox(width: 12),
-                                  ],
-                                ],
-                              )
-                            else
-                              Column(
-                                children: [
-                                  for (var index = 0; index < taskColumns.length; index++) ...[
-                                    taskColumns[index],
-                                    if (index != taskColumns.length - 1)
-                                      const SizedBox(height: 16),
-                                  ],
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -287,18 +209,6 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
         .toList(growable: false);
   }
 
-  List<Widget> _buildTaskColumns(String? projectId, TaskProvider taskProvider) {
-    return TaskStatus.values
-        .map(
-          (status) => ProjectKanbanColumn(
-            title: status.label,
-            taskStatus: status,
-            tasks: taskProvider.tasksForProjectAndStatus(projectId, status),
-          ),
-        )
-        .toList(growable: false);
-  }
-
   String? _validateProject(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Project name is required';
@@ -313,18 +223,5 @@ class _ProjectManagementScreenState extends State<ProjectManagementScreen> {
 
     context.read<ProjectProvider>().addProject(_nameController.text);
     _nameController.clear();
-  }
-
-  String? _resolveSelectedProjectId(List<ProjectItem> projects) {
-    if (_selectedProjectId == null) {
-      return null;
-    }
-
-    final exists = projects.any((project) => project.id == _selectedProjectId);
-    if (!exists) {
-      _selectedProjectId = null;
-    }
-
-    return _selectedProjectId;
   }
 }
