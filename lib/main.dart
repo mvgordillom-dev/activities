@@ -27,7 +27,7 @@ class TaskManagementApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Task Management',
+        title: 'Activities Dashboard',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const AppShell(),

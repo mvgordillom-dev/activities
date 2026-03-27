@@ -1,34 +1,74 @@
+import 'package:activities/features/projects/models/project_item.dart';
 import 'package:activities/features/projects/providers/project_provider.dart';
 import 'package:activities/features/projects/services/project_service.dart';
 import 'package:activities/features/reports/services/report_service.dart';
+import 'package:activities/features/tasks/models/task_item.dart';
 import 'package:activities/features/tasks/providers/task_provider.dart';
 import 'package:activities/features/tasks/services/task_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('completing a task removes it from the active provider list only', () {
+  test('moving a task to in progress removes it from the daily board only', () {
     final provider = TaskProvider(TaskService())..loadInitialTasks();
-    final pendingTask = provider.tasks.firstWhere((task) => !task.completed);
-    final initialActiveCount = provider.tasks.length;
+    final pendingTask = provider.dailyBoardTasks.firstWhere((task) => task.status == TaskStatus.todo);
+    final initialDailyBoardCount = provider.dailyBoardTasks.length;
     final initialTotalCount = provider.allTasks.length;
 
-    provider.completeTask(pendingTask);
+    provider.updateTaskStatus(
+      pendingTask,
+      TaskStatus.inProgress,
+      startedOn: pendingTask.date,
+    );
 
-    expect(provider.tasks.contains(pendingTask), isFalse);
-    expect(provider.tasks.length, initialActiveCount - 1);
+    expect(provider.dailyBoardTasks.any((task) => task.id == pendingTask.id), isFalse);
+    expect(provider.dailyBoardTasks.length, initialDailyBoardCount - 1);
     expect(provider.allTasks.length, initialTotalCount);
-    expect(provider.allTasks.any((task) => task.name == pendingTask.name && task.completed), isTrue);
+    expect(
+      provider.allTasks.any(
+        (task) =>
+            task.id == pendingTask.id &&
+            task.status == TaskStatus.inProgress &&
+            task.startedOn != null,
+      ),
+      isTrue,
+    );
   });
 
-  test('project provider resolves missing project ids to Others', () {
+  test('completing a task stores hours spent and completion metadata', () {
+    final provider = TaskProvider(TaskService())..loadInitialTasks();
+    final task = provider.allTasks.firstWhere((item) => item.status != TaskStatus.done);
+    final startedOn = DateTime(2026, 3, 1);
+    final completedOn = DateTime(2026, 3, 5);
+
+    provider.completeTask(
+      task,
+      hours: 4.5,
+      startedOn: startedOn,
+      completedOn: completedOn,
+    );
+
+    final completedTask = provider.allTasks.firstWhere((item) => item.id == task.id);
+    expect(completedTask.status, TaskStatus.done);
+    expect(completedTask.hours, 4.5);
+    expect(completedTask.startedOn, startedOn);
+    expect(completedTask.completedOn, completedOn);
+  });
+
+  test('project provider resolves missing project ids to Others and tracks status', () {
     final provider = ProjectProvider(ProjectService())..loadInitialProjects();
+    final project = provider.projects.firstWhere((item) => item.id == 'proj-product');
 
     expect(provider.resolveProjectName(null), ProjectProvider.othersProjectName);
     expect(provider.resolveProjectName('missing-id'), ProjectProvider.othersProjectName);
     expect(provider.resolveProjectName('proj-product'), 'Product Launch');
+    expect(provider.resolveProjectStatusLabel(null), ProjectStatus.backlog.label);
+
+    provider.updateProjectStatus(project, ProjectStatus.done);
+
+    expect(provider.resolveProjectStatusLabel('proj-product'), ProjectStatus.done.label);
   });
 
-  test('report service groups tasks by project and tracks completed versus pending', () {
+  test('report service groups daily hours by project', () {
     final projectProvider = ProjectProvider(ProjectService())..loadInitialProjects();
     final taskProvider = TaskProvider(TaskService())..loadInitialTasks();
     final reportService = ReportService();
@@ -40,12 +80,13 @@ void main() {
     );
 
     expect(summaries, isNotEmpty);
-    expect(summaries.any((summary) => summary.projectName == ProjectProvider.othersProjectName), isTrue);
     expect(
-      summaries.every(
-        (summary) => summary.totalTasks == summary.completedTasks + summary.pendingTasks,
+      summaries.fold<double>(0.0, (sum, summary) => sum + summary.totalHours),
+      closeTo(
+        taskProvider.tasksForMonth(month).fold<double>(0.0, (sum, task) => sum + task.hours),
+        0.0001,
       ),
-      isTrue,
     );
+    expect(summaries.every((summary) => summary.entryCount >= summary.doneEntryCount), isTrue);
   });
 }

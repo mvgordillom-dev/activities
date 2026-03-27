@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/widgets/section_card.dart';
 import '../../../projects/providers/project_provider.dart';
 import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
+import 'task_completion_dialog.dart';
 
 class TaskCard extends StatelessWidget {
   const TaskCard({
@@ -17,96 +19,161 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final typeStyle = _TaskTypePalette.from(task.type);
+    final statusStyle = _TaskStatusPalette.from(task.status);
     final projectName = context.watch<ProjectProvider>().resolveProjectName(task.projectId);
 
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          Chip(
-                            avatar: Icon(Icons.flag_rounded, color: typeStyle.foreground, size: 18),
-                            label: Text(task.type.label),
-                            backgroundColor: typeStyle.background,
-                            labelStyle: TextStyle(
-                              color: typeStyle.foreground,
-                              fontWeight: FontWeight.w700,
-                            ),
+    return SectionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.name,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                          Chip(
-                            avatar: const Icon(Icons.folder_open_rounded, size: 18),
-                            label: Text(projectName),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(
+                          avatar: Icon(Icons.flag_rounded, color: typeStyle.foreground, size: 18),
+                          label: Text(task.type.label),
+                          backgroundColor: typeStyle.background,
+                          labelStyle: TextStyle(
+                            color: typeStyle.foreground,
+                            fontWeight: FontWeight.w700,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        Chip(
+                          avatar: Icon(Icons.sync_alt_rounded, color: statusStyle.foreground, size: 18),
+                          label: Text(task.status.label),
+                          backgroundColor: statusStyle.background,
+                          labelStyle: TextStyle(
+                            color: statusStyle.foreground,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Chip(
+                          avatar: const Icon(Icons.folder_open_rounded, size: 18),
+                          label: Text(projectName),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                Checkbox(
-                  value: task.completed,
-                  onChanged: (_) => context.read<TaskProvider>().completeTask(task),
+              ),
+              Tooltip(
+                message: 'Move this daily entry to In Progress',
+                child: Checkbox(
+                  value: task.status == TaskStatus.inProgress,
+                  onChanged: (value) {
+                    if (value ?? false) {
+                      context.read<TaskProvider>().updateTaskStatus(
+                            task,
+                            TaskStatus.inProgress,
+                            startedOn: task.startedOn ?? DateTime.now(),
+                          );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _TaskMetaRow(
+            icon: Icons.schedule_rounded,
+            label: 'Hours logged',
+            value: _formatHours(task.hours),
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.description_rounded,
+            label: 'Description',
+            value: task.description,
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.event_rounded,
+            label: 'Creation date',
+            value: DateFormat('MMM d, y').format(task.date),
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.person_rounded,
+            label: 'Assigned to',
+            value: task.responsible,
+          ),
+          const SizedBox(height: 10),
+          _TaskMetaRow(
+            icon: Icons.folder_special_rounded,
+            label: 'Project',
+            value: projectName,
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _changeStatus(context, TaskStatus.inProgress),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('In Progress'),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _changeStatus(context, TaskStatus.done),
+                  icon: const Icon(Icons.done_rounded),
+                  label: const Text('Complete'),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            _TaskMetaRow(
-              icon: Icons.folder_special_rounded,
-              label: 'Project',
-              value: projectName,
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.description_rounded,
-              label: 'Description',
-              value: task.description,
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.event_rounded,
-              label: 'Date',
-              value: DateFormat('MMM d, y • h:mm a').format(task.date),
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.person_rounded,
-              label: 'Responsible',
-              value: task.responsible,
-            ),
-            const SizedBox(height: 10),
-            _TaskMetaRow(
-              icon: Icons.done_all_rounded,
-              label: 'Completed',
-              value: task.completed ? 'Yes' : 'No',
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _changeStatus(BuildContext context, TaskStatus nextStatus) async {
+    final taskProvider = context.read<TaskProvider>();
+
+    if (nextStatus == TaskStatus.done) {
+      final details = await showTaskCompletionDialog(context, task: task);
+      if (details == null || !context.mounted) {
+        return;
+      }
+
+      taskProvider.completeTask(
+        task,
+        hours: details.hours,
+        startedOn: details.startedOn,
+        completedOn: details.completedOn,
+      );
+      return;
+    }
+
+    taskProvider.updateTaskStatus(
+      task,
+      nextStatus,
+      startedOn: nextStatus == TaskStatus.inProgress ? (task.startedOn ?? DateTime.now()) : null,
+    );
+  }
+
+  String _formatHours(double hours) {
+    final wholeHours = hours.truncateToDouble() == hours;
+    final value = wholeHours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
+    return '$value hour${hours == 1 ? '' : 's'}';
   }
 }
 
@@ -186,6 +253,36 @@ class _TaskTypePalette {
         return const _TaskTypePalette(
           background: Color(0xFFEDE9FE),
           foreground: Color(0xFF6D28D9),
+        );
+    }
+  }
+}
+
+class _TaskStatusPalette {
+  const _TaskStatusPalette({
+    required this.background,
+    required this.foreground,
+  });
+
+  final Color background;
+  final Color foreground;
+
+  factory _TaskStatusPalette.from(TaskStatus status) {
+    switch (status) {
+      case TaskStatus.todo:
+        return const _TaskStatusPalette(
+          background: Color(0xFFF3F4F6),
+          foreground: Color(0xFF374151),
+        );
+      case TaskStatus.inProgress:
+        return const _TaskStatusPalette(
+          background: Color(0xFFFEF3C7),
+          foreground: Color(0xFFB45309),
+        );
+      case TaskStatus.done:
+        return const _TaskStatusPalette(
+          background: Color(0xFFDCFCE7),
+          foreground: Color(0xFF166534),
         );
     }
   }

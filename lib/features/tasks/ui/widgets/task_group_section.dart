@@ -20,7 +20,7 @@ class TaskGroupSection extends StatelessWidget {
     final cards = tasks
         .map(
           (task) => SizedBox(
-            width: isWide ? 360 : double.infinity,
+            width: isWide ? 380 : double.infinity,
             child: TaskCard(task: task),
           ),
         )
@@ -31,11 +31,30 @@ class TaskGroupSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: Text(
-            DateFormat('EEEE, MMMM d, y').format(day),
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  DateFormat('EEEE, MMMM d, y').format(day),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${tasks.length} entr${tasks.length == 1 ? 'y' : 'ies'}',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
           ),
         ),
         if (isWide)

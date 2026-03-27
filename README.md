@@ -4,35 +4,40 @@ A complete Flutter task management application designed for mobile and web.
 
 ## Features
 
-- Clean architecture split into models, services, providers, screens, and widgets.
+- Clean architecture split into models, services, providers, screens, and reusable widgets.
 - Responsive layout optimized for both mobile and larger web viewports.
-- Tasks grouped by day.
-- Full task details shown in every card.
-- Create-task dialog with validation and optional project classification.
-- Completed tasks disappear immediately from the active list while remaining available for reports.
-- Project management screen to create and review projects.
-- Monthly reports grouped by project, including Others for unclassified tasks.
+- Main task board with active daily work logs grouped by date.
+- Dedicated add-entry screen with per-day logged hours, optional project assignment, and validation.
+- Project management with project creation, automatic `Others` classification, project hour totals, and a Jira-style Kanban board.
+- Monthly reports grouped by project, including daily-entry counts, tracked days, total logged hours, and Excel export.
+- Done entries disappear from the active board while remaining available in historical monthly reports and project boards.
 
 ## Structure
 
 ```text
 lib/
-  core/navigation/
-  core/theme/
-  features/tasks/
-    models/
-    providers/
-    services/
-    ui/screens/
-    ui/widgets/
-  features/projects/
-    models/
-    providers/
-    services/
-    ui/screens/
-  features/reports/
-    models/
-    ui/screens/
+  core/
+    navigation/
+    theme/
+    widgets/
+  features/
+    projects/
+      models/
+      providers/
+      services/
+      ui/screens/
+      ui/widgets/
+    reports/
+      models/
+      services/
+      ui/screens/
+      ui/widgets/
+    tasks/
+      models/
+      providers/
+      services/
+      ui/screens/
+      ui/widgets/
 ```
 
 ## Getting started

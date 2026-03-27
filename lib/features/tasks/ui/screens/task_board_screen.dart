@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/widgets/empty_state_card.dart';
+import '../../../../core/widgets/section_card.dart';
 import '../../../projects/providers/project_provider.dart';
 import '../../providers/task_provider.dart';
-import '../widgets/task_form_dialog.dart';
+import 'add_task_screen.dart';
 import '../widgets/task_group_section.dart';
 
 class TaskBoardScreen extends StatelessWidget {
@@ -19,15 +21,12 @@ class TaskBoardScreen extends StatelessWidget {
     final taskProvider = context.watch<TaskProvider>();
     final groupedTasks = taskProvider.groupedTasks;
     final isWide = MediaQuery.sizeOf(context).width >= 900;
-    final completedTasks = taskProvider.allTasks.where((task) => task.completed).length;
     final projectsCount = context.watch<ProjectProvider>().projects.length;
 
     return SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isWide ? 1200 : 720,
-          ),
+          constraints: BoxConstraints(maxWidth: isWide ? 1240 : 760),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: isWide ? 32 : 16,
@@ -36,17 +35,33 @@ class TaskBoardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ResponsiveHeader(
+                _HeroHeader(
                   isWide: isWide,
                   activeDays: groupedTasks.length,
-                  completedTasks: completedTasks,
+                  activeTasks: taskProvider.pendingCount,
+                  completedTasks: taskProvider.completedCount,
                   projectsCount: projectsCount,
+                  totalHours: taskProvider.totalLoggedHours,
                   onCreateTask: onCreateTask,
                 ),
                 const SizedBox(height: 20),
                 Expanded(
                   child: groupedTasks.isEmpty
-                      ? _EmptyState(isWide: isWide)
+                      ? EmptyStateCard(
+                          icon: Icons.task_alt_rounded,
+                          title: 'No active daily entries',
+                          message: 'Entries move off this board once they are started or completed. Create a new daily log to see it grouped by date here.',
+                          action: FilledButton.icon(
+                            onPressed: onCreateTask ??
+                                () => Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => const AddTaskScreen(),
+                                      ),
+                                    ),
+                            icon: const Icon(Icons.add_task_rounded),
+                            label: const Text('Create entry'),
+                          ),
+                        )
                       : ListView.separated(
                           itemBuilder: (context, index) {
                             final group = groupedTasks.entries.elementAt(index);
@@ -68,19 +83,23 @@ class TaskBoardScreen extends StatelessWidget {
   }
 }
 
-class _ResponsiveHeader extends StatelessWidget {
-  const _ResponsiveHeader({
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
     required this.isWide,
     required this.activeDays,
+    required this.activeTasks,
     required this.completedTasks,
     required this.projectsCount,
+    required this.totalHours,
     this.onCreateTask,
   });
 
   final bool isWide;
   final int activeDays;
+  final int activeTasks;
   final int completedTasks;
   final int projectsCount;
+  final double totalHours;
   final VoidCallback? onCreateTask;
 
   @override
@@ -105,11 +124,17 @@ class _ResponsiveHeader extends StatelessWidget {
                 children: [
                   Expanded(child: _HeaderText(onCreateTask: onCreateTask)),
                   const SizedBox(width: 24),
-                  _SummaryGrid(
-                    isWide: true,
-                    activeDays: activeDays,
-                    completedTasks: completedTasks,
-                    projectsCount: projectsCount,
+                  SizedBox(
+                    width: 360,
+                    child: _SummaryGrid(
+                      items: [
+                        _SummaryItem(label: 'Active days', value: '$activeDays'),
+                        _SummaryItem(label: 'Open entries', value: '$activeTasks'),
+                        _SummaryItem(label: 'Done entries', value: '$completedTasks'),
+                        _SummaryItem(label: 'Logged hours', value: _formatHours(totalHours)),
+                        _SummaryItem(label: 'Projects', value: '$projectsCount'),
+                      ],
+                    ),
                   ),
                 ],
               )
@@ -117,16 +142,23 @@ class _ResponsiveHeader extends StatelessWidget {
               _HeaderText(onCreateTask: onCreateTask),
               const SizedBox(height: 20),
               _SummaryGrid(
-                isWide: false,
-                activeDays: activeDays,
-                completedTasks: completedTasks,
-                projectsCount: projectsCount,
+                items: [
+                  _SummaryItem(label: 'Active days', value: '$activeDays'),
+                  _SummaryItem(label: 'Open entries', value: '$activeTasks'),
+                  _SummaryItem(label: 'Done entries', value: '$completedTasks'),
+                  _SummaryItem(label: 'Logged hours', value: _formatHours(totalHours)),
+                  _SummaryItem(label: 'Projects', value: '$projectsCount'),
+                ],
               ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  String _formatHours(double hours) {
+    return hours.truncateToDouble() == hours ? hours.toStringAsFixed(0) : hours.toStringAsFixed(2);
   }
 }
 
@@ -141,7 +173,7 @@ class _HeaderText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Plan, prioritize, and deliver tasks efficiently.',
+          'Manage daily work logs by date, owner, and project.',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -149,7 +181,7 @@ class _HeaderText extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          'Tasks stay grouped by day, keep full details visible, and disappear from the active board once completed.',
+          'Each card represents hours logged for a single date. Start an entry to move it into In Progress, then finish it from the project board once the work is complete.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withOpacity(0.92),
                 height: 1.45,
@@ -161,12 +193,14 @@ class _HeaderText extends StatelessWidget {
             backgroundColor: Colors.white,
             foregroundColor: Theme.of(context).colorScheme.primary,
           ),
-          onPressed: onCreateTask ?? () => showDialog<void>(
-            context: context,
-            builder: (_) => const TaskFormDialog(),
-          ),
+          onPressed: onCreateTask ??
+              () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AddTaskScreen(),
+                    ),
+                  ),
           icon: const Icon(Icons.add_task_rounded),
-          label: const Text('Create task'),
+          label: const Text('Create entry'),
         ),
       ],
     );
@@ -174,48 +208,40 @@ class _HeaderText extends StatelessWidget {
 }
 
 class _SummaryGrid extends StatelessWidget {
-  const _SummaryGrid({
-    required this.isWide,
-    required this.activeDays,
-    required this.completedTasks,
-    required this.projectsCount,
-  });
+  const _SummaryGrid({required this.items});
 
-  final bool isWide;
-  final int activeDays;
-  final int completedTasks;
-  final int projectsCount;
+  final List<_SummaryItem> items;
 
   @override
   Widget build(BuildContext context) {
-    final cards = [
-      _SummaryCard(label: 'Active Days', value: '$activeDays'),
-      _SummaryCard(label: 'Projects', value: '$projectsCount'),
-      _SummaryCard(label: 'Completed', value: '$completedTasks'),
-    ];
-
-    if (isWide) {
-      return SizedBox(
-        width: 320,
-        child: Column(
-          children: [
-            for (var index = 0; index < cards.length; index++) ...[
-              cards[index],
-              if (index != cards.length - 1) const SizedBox(height: 12),
-            ],
-          ],
-        ),
-      );
-    }
-
     return Wrap(
       spacing: 12,
       runSpacing: 12,
-      children: cards
+      children: items
           .map(
-            (card) => SizedBox(
-              width: 180,
-              child: card,
+            (item) => SizedBox(
+              width: 170,
+              child: SectionCard(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.label,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: Colors.grey.shade700,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.value,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           )
           .toList(),
@@ -223,89 +249,9 @@ class _SummaryGrid extends StatelessWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
-    required this.label,
-    required this.value,
-  });
+class _SummaryItem {
+  const _SummaryItem({required this.label, required this.value});
 
   final String label;
   final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.18)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white70,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.isWide});
-
-  final bool isWide;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
-        padding: EdgeInsets.all(isWide ? 32 : 24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.task_alt_rounded,
-              size: 64,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No pending tasks',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Create a new task to populate the schedule. Completed work is automatically removed from this list.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

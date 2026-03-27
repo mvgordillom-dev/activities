@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/projects/ui/screens/project_management_screen.dart';
 import '../../features/reports/ui/screens/reports_screen.dart';
 import '../../features/tasks/ui/screens/task_board_screen.dart';
-import '../../features/tasks/ui/widgets/task_form_dialog.dart';
+import '../../features/tasks/ui/screens/add_task_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -26,7 +26,7 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Management System'),
+        title: const Text('Activities Dashboard'),
       ),
       body: isWide
           ? Row(
@@ -79,7 +79,7 @@ class _AppShellState extends State<AppShell> {
           ? FloatingActionButton.extended(
               onPressed: _openTaskDialog,
               icon: const Icon(Icons.add_task_rounded),
-              label: const Text('New Task'),
+              label: const Text('New Entry'),
             )
           : null,
     );
@@ -92,9 +92,10 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openTaskDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (_) => const TaskFormDialog(),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AddTaskScreen(),
+      ),
     );
   }
 }
