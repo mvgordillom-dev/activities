@@ -116,6 +116,31 @@ class TaskProvider extends ChangeNotifier {
     _refreshTasks();
   }
 
+  void updateTaskDetails({
+    required TaskItem task,
+    required String name,
+    required TaskType type,
+    required String description,
+    required DateTime date,
+    required String responsible,
+    required double hours,
+    String? projectId,
+  }) {
+    _taskService.updateTask(
+      task.copyWith(
+        name: name,
+        type: type,
+        description: description,
+        date: DateTime(date.year, date.month, date.day),
+        responsible: responsible,
+        hours: hours,
+        projectId: projectId,
+        clearProjectId: projectId == null,
+      ),
+    );
+    _refreshTasks();
+  }
+
   void completeTask(
     TaskItem task, {
     required double hours,
