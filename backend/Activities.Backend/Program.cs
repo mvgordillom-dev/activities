@@ -5,6 +5,22 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+const string CorsPolicyName = "FrontendCors";
+var frontendOrigins = builder.Configuration
+    .GetSection("FrontendOrigins")
+    .Get<string[]>() ?? ["http://localhost:3000", "http://localhost:5000", "http://localhost:8080"];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy.WithOrigins(frontendOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
@@ -29,6 +45,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(CorsPolicyName);
+
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 app.MapHub<TaskHub>(TaskHub.HubRoute);
 
