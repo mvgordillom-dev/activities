@@ -7,6 +7,7 @@ import '../../../projects/providers/project_provider.dart';
 import '../../models/task_item.dart';
 import '../../providers/task_provider.dart';
 import 'task_completion_dialog.dart';
+import 'task_form_dialog.dart';
 
 class TaskCard extends StatelessWidget {
   const TaskCard({
@@ -95,6 +96,11 @@ class TaskCard extends StatelessWidget {
               alignment: WrapAlignment.end,
               children: [
                 OutlinedButton.icon(
+                  onPressed: () => _editTask(context),
+                  icon: const Icon(Icons.edit_rounded),
+                  label: const Text('Edit'),
+                ),
+                OutlinedButton.icon(
                   onPressed: () => _changeStatus(context, TaskStatus.inProgress),
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: const Text('In Progress'),
@@ -109,6 +115,20 @@ class TaskCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _editTask(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) {
+        return Dialog(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: TaskFormView(initialTask: task),
+          ),
+        );
+      },
     );
   }
 

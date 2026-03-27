@@ -10,9 +10,11 @@ class TaskFormView extends StatefulWidget {
   const TaskFormView({
     super.key,
     this.onSaved,
+    this.initialTask,
   });
 
   final VoidCallback? onSaved;
+  final TaskItem? initialTask;
 
   @override
   State<TaskFormView> createState() => _TaskFormViewState();
@@ -27,6 +29,25 @@ class _TaskFormViewState extends State<TaskFormView> {
   TaskType _selectedType = TaskType.normal;
   DateTime _selectedDate = DateTime.now();
   String? _selectedProjectId;
+
+  bool get _isEditing => widget.initialTask != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialTask = widget.initialTask;
+    if (initialTask == null) {
+      return;
+    }
+
+    _nameController.text = initialTask.name;
+    _descriptionController.text = initialTask.description;
+    _responsibleController.text = initialTask.responsible;
+    _hoursController.text = initialTask.hours.toString();
+    _selectedType = initialTask.type;
+    _selectedDate = initialTask.date;
+    _selectedProjectId = initialTask.projectId;
+  }
 
   @override
   void dispose() {
@@ -49,14 +70,16 @@ class _TaskFormViewState extends State<TaskFormView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Create daily work log',
+            _isEditing ? 'Edit daily work log' : 'Create daily work log',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Each entry stores hours logged for a single date and project. New entries start in All and move out of this list when you start them.',
+            _isEditing
+                ? 'Update this entry to keep task records accurate for the selected date and project.'
+                : 'Each entry stores hours logged for a single date and project. New entries start in All and move out of this list when you start them.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 22),
@@ -165,7 +188,7 @@ class _TaskFormViewState extends State<TaskFormView> {
                 FilledButton.icon(
                   onPressed: _submit,
                   icon: const Icon(Icons.save_rounded),
-                  label: const Text('Save daily entry'),
+                  label: Text(_isEditing ? 'Update daily entry' : 'Save daily entry'),
                 ),
               ],
             ),
@@ -217,15 +240,30 @@ class _TaskFormViewState extends State<TaskFormView> {
       return;
     }
 
-    context.read<TaskProvider>().addTask(
-          name: _nameController.text.trim(),
-          type: _selectedType,
-          description: _descriptionController.text.trim(),
-          date: _selectedDate,
-          responsible: _responsibleController.text.trim(),
-          hours: double.parse(_hoursController.text.trim()),
-          projectId: _selectedProjectId,
-        );
+    final taskProvider = context.read<TaskProvider>();
+
+    if (_isEditing) {
+      taskProvider.updateTaskDetails(
+        task: widget.initialTask!,
+        name: _nameController.text.trim(),
+        type: _selectedType,
+        description: _descriptionController.text.trim(),
+        date: _selectedDate,
+        responsible: _responsibleController.text.trim(),
+        hours: double.parse(_hoursController.text.trim()),
+        projectId: _selectedProjectId,
+      );
+    } else {
+      taskProvider.addTask(
+        name: _nameController.text.trim(),
+        type: _selectedType,
+        description: _descriptionController.text.trim(),
+        date: _selectedDate,
+        responsible: _responsibleController.text.trim(),
+        hours: double.parse(_hoursController.text.trim()),
+        projectId: _selectedProjectId,
+      );
+    }
 
     widget.onSaved?.call();
     Navigator.of(context).pop();
